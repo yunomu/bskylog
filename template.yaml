@@ -1,0 +1,74 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Description: bskylog
+
+Parameters:
+  SiteDomainName:
+    Type: String
+  Certificate:
+    Type: String
+  CloudFrontManagedCachePolicy:
+    Type: String
+    Default: "658327ea-f89d-4fab-a63d-7e88639e58f6"
+
+Resources:
+  PublishBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicPolicy: false
+
+  PublishBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref PublishBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub "arn:aws:s3:::${PublishBucket}/*"
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${Distribution}"
+
+  CloudFrontOriginAccessControl:
+    Type: AWS::CloudFront::OriginAccessControl
+    Properties:
+      OriginAccessControlConfig:
+        Name: !Ref AWS::StackName
+        OriginAccessControlOriginType: s3
+        SigningBehavior: always
+        SigningProtocol: sigv4
+
+  Distribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        DefaultRootObject: index.html
+        ViewerCertificate:
+          AcmCertificateArn: !Ref Certificate
+          MinimumProtocolVersion: TLSv1.2_2021
+          SslSupportMethod: sni-only
+        DefaultCacheBehavior:
+          CachePolicyId: !Ref CloudFrontManagedCachePolicy
+          TargetOriginId: !Sub "s3-${PublishBucket}"
+          ViewerProtocolPolicy: https-only
+          AllowedMethods:
+            - GET
+            - HEAD
+        Origins:
+          - Id: !Sub "s3-${PublishBucket}"
+            DomainName: !GetAtt PublishBucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt CloudFrontOriginAccessControl.Id
+            S3OriginConfig: {}
+
+Outputs:
+  PublishBucket:
+    Value: !Ref PublishBucket
+  DistributionDomainName:
+    Value: !GetAtt Distribution.DomainName
+  Distribution:
+    Value: !Ref Distribution

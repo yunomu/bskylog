@@ -1,0 +1,26 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <title>Loading...</title>
+    <meta charset="UTF-8">
+    <script src="/main.js"></script>
+  </head>
+  <body>
+    <main id="app"></main>
+    <script>
+      fetch("/config.json")
+        .then(res => {
+                return res.json();
+              })
+        .then(cfg => {
+                const flags = {
+                                "windowWidth": window.innerWidth,
+                                "windowHeight": window.innerHeight};
+                const app = Elm.Main.init({
+                        node: document.getElementById("app"),
+                        flags: flags
+                      });
+              });
+    </script>
+  </body>
+</html>

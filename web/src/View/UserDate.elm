@@ -3,19 +3,19 @@ module View.UserDate exposing (view)
 import Element exposing (Attribute, Element, px)
 import Element.Border as Border
 import Element.Font as Font
-import Feed exposing (Feed, Post)
+import Feed exposing (Facet, Feed, Post, Record)
 import Html
 import Html.Attributes as Attr
 
 
-postText : String -> Element msg
-postText text =
+postText : Record -> Element msg
+postText record =
     Element.html <|
         Html.span
             [ Attr.style "white-space" "pre-wrap"
             , Attr.style "margin" "10px"
             ]
-            [ Html.text text ]
+            [ Html.text record.text ]
 
 
 last : List a -> Maybe a
@@ -130,7 +130,7 @@ viewFeed feed =
                 [ Element.text feed.post.author.displayName
                 , Element.text <| "@" ++ feed.post.author.handle
                 ]
-            , postText feed.post.record.text
+            , postText feed.post.record
             , Element.link [ Font.size 15 ]
                 { url = postUrl feed.post
                 , label =

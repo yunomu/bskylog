@@ -128,7 +128,7 @@ func (c *DailyJSONRecord) Consume(ctx context.Context, post *bsky.FeedDefs_FeedV
 		// skip
 		return nil
 	}
-	t.In(c.location)
+	t = t.In(c.location)
 
 	if err := c.ensureStream(t); err != nil {
 		c.logger.Error("ensureStream() error",

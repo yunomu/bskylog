@@ -4,8 +4,91 @@ import Element exposing (Attribute, Element, px)
 import Element.Border as Border
 import Element.Font as Font
 import Feed exposing (Facet, Feed, Post, Record)
-import Html
+import Html exposing (Html)
 import Html.Attributes as Attr
+import String.UTF8 as UTF8
+
+
+type Text
+    = String String
+    | Tag String
+    | Link String String
+
+
+split : Int -> Int -> List a -> List a
+split start end =
+    List.drop start >> List.take (end - start)
+
+
+toS : List Int -> String
+toS bs =
+    case UTF8.toString bs of
+        Ok s ->
+            s
+
+        Err err ->
+            ""
+
+
+decorate : Record -> List Text
+decorate record =
+    let
+        bs =
+            UTF8.toBytes record.text
+
+        f start facets =
+            case facets of
+                facet :: fs ->
+                    String (toS <| split start facet.index.start bs)
+                        :: (let
+                                txt =
+                                    toS <| split facet.index.start facet.index.end bs
+                            in
+                            case List.head facet.features of
+                                Just (Feed.Tag tag) ->
+                                    Tag tag
+
+                                Just (Feed.Link url) ->
+                                    Link txt url
+
+                                Nothing ->
+                                    String txt
+                           )
+                        :: f facet.index.end fs
+
+                [] ->
+                    case List.drop start bs of
+                        [] ->
+                            []
+
+                        bs_ ->
+                            [ String <| toS bs_ ]
+    in
+    f 0 record.facets
+
+
+viewText : List Text -> List (Html msg)
+viewText list =
+    case list of
+        t :: ts ->
+            (case t of
+                String s ->
+                    Html.text s
+
+                Tag tag ->
+                    Html.a
+                        [ Attr.href <| "https://bsky.app/hashtag/" ++ tag ]
+                        [ Html.text <| "#" ++ tag ]
+
+                Link caption url ->
+                    Html.a
+                        [ Attr.href url ]
+                        [ Html.text caption ]
+            )
+                :: viewText ts
+
+        [] ->
+            []
 
 
 postText : Record -> Element msg
@@ -15,7 +98,9 @@ postText record =
             [ Attr.style "white-space" "pre-wrap"
             , Attr.style "margin" "10px"
             ]
-            [ Html.text record.text ]
+        <|
+            viewText <|
+                decorate record
 
 
 last : List a -> Maybe a

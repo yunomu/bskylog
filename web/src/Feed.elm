@@ -1,4 +1,4 @@
-module Feed exposing (Author, Facet, Feature, Feed, Index, Post, Record, decoder)
+module Feed exposing (Author, Facet, Feature(..), Feed, Index, Post, Record, decoder)
 
 import Json.Decode as D exposing (Decoder, Value)
 

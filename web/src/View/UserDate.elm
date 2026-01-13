@@ -3,7 +3,7 @@ module View.UserDate exposing (view)
 import Element exposing (Attribute, Element, px)
 import Element.Border as Border
 import Element.Font as Font
-import Feed exposing (Facet, Feed, Post, Record)
+import Feed exposing (Embed, External, Facet, Feed, Image, Post, Record, Video)
 import Html exposing (Html)
 import Html.Attributes as Attr
 import String.UTF8 as UTF8
@@ -93,14 +93,18 @@ viewText list =
 
 postText : Record -> Element msg
 postText record =
-    Element.html <|
-        Html.span
-            [ Attr.style "white-space" "pre-wrap"
-            , Attr.style "margin" "10px"
-            ]
-        <|
-            viewText <|
-                decorate record
+    if String.isEmpty record.text then
+        Element.none
+
+    else
+        Element.html <|
+            Html.span
+                [ Attr.style "white-space" "pre-wrap"
+                , Attr.style "margin" "10px"
+                ]
+            <|
+                viewText <|
+                    decorate record
 
 
 last : List a -> Maybe a
@@ -188,6 +192,69 @@ formatHMS ( zh, zm ) hm =
                 ]
 
 
+imageView : Image -> Element msg
+imageView image =
+    Element.link []
+        { url = image.fullsize
+        , label =
+            Element.image
+                [ Element.width (px 140) ]
+                { src = image.thumb
+                , description = image.alt
+                }
+        }
+
+
+externalView : External -> Element msg
+externalView external =
+    Element.link []
+        { url = external.uri
+        , label =
+            Element.column
+                [ Border.rounded 5
+                , Border.width 1
+                , Element.width (px 410)
+                ]
+                [ Element.el [ Element.padding 5 ] <| Element.text external.title
+                , Element.image
+                    [ Element.width (px 400)
+                    , Element.padding 5
+                    ]
+                    { src = external.thumb
+                    , description = external.description
+                    }
+                ]
+        }
+
+
+videoView : Video -> Element msg
+videoView video =
+    Element.link []
+        { url = video.playlist
+        , label =
+            Element.image
+                [ Element.width (px 140) ]
+                { src = video.thumbnail
+                , description = "embedded video"
+                }
+        }
+
+
+embedView : Embed -> Element msg
+embedView embed =
+    Element.el [ Element.paddingXY 10 0 ] <|
+        case embed of
+            Feed.EmbeddedImage images ->
+                Element.row [ Element.spacingXY 0 3 ] <|
+                    List.map imageView images
+
+            Feed.EmbeddedVideo video ->
+                videoView video
+
+            Feed.EmbeddedExternal external ->
+                externalView external
+
+
 viewFeed : Feed -> Element msg
 viewFeed feed =
     Element.row
@@ -210,12 +277,19 @@ viewFeed feed =
             }
         , Element.column
             [ Element.width (px 600)
+            , Element.spacing 10
             ]
             [ Element.row [ Element.spacing 5 ]
                 [ Element.text feed.post.author.displayName
                 , Element.text <| "@" ++ feed.post.author.handle
                 ]
             , postText feed.post.record
+            , case feed.post.embed of
+                Just embed ->
+                    embedView embed
+
+                Nothing ->
+                    Element.none
             , Element.link [ Font.size 15 ]
                 { url = postUrl feed.post
                 , label =

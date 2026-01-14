@@ -10,6 +10,9 @@ Parameters:
   CloudFrontManagedCachePolicy:
     Type: String
     Default: "658327ea-f89d-4fab-a63d-7e88639e58f6"
+  HandleIndex:
+    Type: String
+    Default: HandleIndex
 
 Resources:
   PublishBucket:
@@ -72,6 +75,26 @@ Resources:
             OriginAccessControlId: !GetAtt CloudFrontOriginAccessControl.Id
             S3OriginConfig: {}
 
+  UserTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: Did
+          AttributeType: S
+        - AttributeName: Handle
+          AttributeType: S
+      KeySchema:
+        - AttributeName: Did
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: !Ref HandleIndex
+          KeySchema:
+            - AttributeName: Handle
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
 Outputs:
   PublishBucket:
     Value: !Ref PublishBucket
@@ -79,3 +102,5 @@ Outputs:
     Value: !GetAtt Distribution.DomainName
   Distribution:
     Value: !Ref Distribution
+  UserTable:
+    Value: !Ref UserTable

@@ -5,8 +5,8 @@ import (
 
 	"github.com/bluesky-social/indigo/api/bsky"
 
-	"github.com/yunomu/bskylog/consumer"
-	"github.com/yunomu/bskylog/scanner"
+	"github.com/yunomu/bskylog/lib/consumer"
+	"github.com/yunomu/bskylog/lib/scanner"
 )
 
 type Processor struct {

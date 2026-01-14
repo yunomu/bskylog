@@ -2,7 +2,10 @@ module github.com/yunomu/bskylog
 
 go 1.25
 
-require github.com/bluesky-social/indigo v0.0.0-20251223190123-598fbf0e146e
+require (
+	github.com/bluesky-social/indigo v0.0.0-20251223190123-598fbf0e146e
+	github.com/google/subcommands v1.2.0
+)
 
 require (
 	github.com/earthboundkid/versioninfo/v2 v2.24.1 // indirect

@@ -7,14 +7,14 @@ import (
 
 var ErrNotExists = errors.New("not exists")
 
-type Crawler struct {
+type Timestamp struct {
 	Did       string
-	Latest    string
-	Timestamp string
+	LatestCid string
+	Timestamp int
 }
 
 type DB interface {
-	Get(ctx context.Context, did string) (*Crawler, error)
-	Put(ctx context.Context, crawler *Crawler) error
-	Scan(ctx context.Context, f func(*Crawler) error) error
+	Get(ctx context.Context, did string) (*Timestamp, error)
+	Put(ctx context.Context, ts *Timestamp) error
+	Scan(ctx context.Context, f func(*Timestamp) error) error
 }

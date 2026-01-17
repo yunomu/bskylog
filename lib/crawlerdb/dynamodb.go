@@ -27,20 +27,20 @@ func NewDynamoDB(
 }
 
 type DynamoDBRecord struct {
-	Did    string `dynamodbav:"Did"`
-	Latest string `dynamodbav:"Latest"`
-	TS     string `dynamodbav:"TS"`
+	Did       string `dynamodbav:"Did"`
+	LatestCid string `dynamodbav:"Latest"`
+	TS        int    `dynamodbav:"TS"`
 }
 
-func dynamoToCrawler(rec *DynamoDBRecord) *Crawler {
-	return &Crawler{
+func dynamoToTimestamp(rec *DynamoDBRecord) *Timestamp {
+	return &Timestamp{
 		Did:       rec.Did,
-		Latest:    rec.Latest,
+		LatestCid: rec.LatestCid,
 		Timestamp: rec.TS,
 	}
 }
 
-func (d *DynamoDB) Get(ctx context.Context, did string) (*Crawler, error) {
+func (d *DynamoDB) Get(ctx context.Context, did string) (*Timestamp, error) {
 	out, err := d.client.GetItem(ctx, &dynamodb.GetItemInput{
 		TableName: aws.String(d.tableName),
 		Key: map[string]types.AttributeValue{
@@ -62,10 +62,10 @@ func (d *DynamoDB) Get(ctx context.Context, did string) (*Crawler, error) {
 		return nil, err
 	}
 
-	return dynamoToCrawler(&rec), nil
+	return dynamoToTimestamp(&rec), nil
 }
 
-func (d *DynamoDB) Scan(ctx context.Context, f func(*Crawler) error) error {
+func (d *DynamoDB) Scan(ctx context.Context, f func(*Timestamp) error) error {
 	paginator := dynamodb.NewScanPaginator(d.client, &dynamodb.ScanInput{
 		TableName: aws.String(d.tableName),
 	})
@@ -81,7 +81,7 @@ func (d *DynamoDB) Scan(ctx context.Context, f func(*Crawler) error) error {
 				return err
 			}
 
-			if err := f(dynamoToCrawler(&rec)); err != nil {
+			if err := f(dynamoToTimestamp(&rec)); err != nil {
 				return err
 			}
 		}
@@ -90,11 +90,11 @@ func (d *DynamoDB) Scan(ctx context.Context, f func(*Crawler) error) error {
 	return nil
 }
 
-func (d *DynamoDB) Put(ctx context.Context, crawler *Crawler) error {
+func (d *DynamoDB) Put(ctx context.Context, ts *Timestamp) error {
 	item, err := attributevalue.MarshalMap(&DynamoDBRecord{
-		Did:    crawler.Did,
-		Latest: crawler.Latest,
-		TS:     crawler.Timestamp,
+		Did:       ts.Did,
+		LatestCid: ts.LatestCid,
+		TS:        ts.Timestamp,
 	})
 	if err != nil {
 		return err

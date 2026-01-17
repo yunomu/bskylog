@@ -11,6 +11,7 @@ import (
 
 	"github.com/yunomu/bskylog/cmd/bsky"
 	"github.com/yunomu/bskylog/cmd/config"
+	"github.com/yunomu/bskylog/cmd/crawlerdb"
 	"github.com/yunomu/bskylog/cmd/userdb"
 )
 
@@ -19,6 +20,7 @@ var (
 )
 
 func init() {
+	subcommands.Register(crawlerdb.NewCommand(), "")
 	subcommands.Register(userdb.NewCommand(), "")
 	subcommands.Register(bsky.NewCommand(), "")
 	subcommands.Register(config.NewCommand(), "")

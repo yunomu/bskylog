@@ -29,7 +29,7 @@ func NewDynamoDB(
 type DynamoDBRecord struct {
 	Did       string `dynamodbav:"Did"`
 	LatestCid string `dynamodbav:"Latest"`
-	TS        int    `dynamodbav:"TS"`
+	TS        uint64 `dynamodbav:"TS"`
 }
 
 func dynamoToTimestamp(rec *DynamoDBRecord) *Timestamp {

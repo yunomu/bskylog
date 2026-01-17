@@ -22,6 +22,10 @@ type command struct {
 	commander *subcommands.Commander
 }
 
+func NewCommand() subcommands.Command {
+	return &command{}
+}
+
 func (c *command) Name() string     { return "bsky" }
 func (c *command) Synopsis() string { return "bsky command" }
 func (c *command) Usage() string {
@@ -41,6 +45,16 @@ func (c *command) SetFlags(f *flag.FlagSet) {
 }
 
 func (c *command) Execute(ctx context.Context, f *flag.FlagSet, args ...interface{}) subcommands.ExitStatus {
+	if len(args) == 0 {
+		slog.Error("config not found in args")
+		return subcommands.ExitFailure
+	}
+	cfg, ok := args[0].(map[string]string)
+	if !ok {
+		slog.Error("config has unexpected type")
+		return subcommands.ExitFailure
+	}
+
 	if *c.handle == "" {
 		slog.Error("Handle is empty")
 		return subcommands.ExitFailure
@@ -79,5 +93,5 @@ func (c *command) Execute(ctx context.Context, f *flag.FlagSet, args ...interfac
 		Handle:     auth.Handle,
 	}
 
-	return c.commander.Execute(ctx, client, auth)
+	return c.commander.Execute(ctx, client, auth, cfg)
 }

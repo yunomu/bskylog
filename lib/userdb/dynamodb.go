@@ -19,6 +19,18 @@ type DynamoDB struct {
 
 var _ DB = (*DynamoDB)(nil)
 
+func NewDynamoDB(
+	client *dynamodb.Client,
+	tableName string,
+	handleIndex string,
+) *DynamoDB {
+	return &DynamoDB{
+		client:      client,
+		tableName:   tableName,
+		handleIndex: handleIndex,
+	}
+}
+
 type DynamoDBRecord struct {
 	Did      string `dynamodbav:"Did"`
 	Handle   string `dynamodbav:"Handle"`
@@ -86,6 +98,31 @@ func (d *DynamoDB) GetByHandle(ctx context.Context, handle string) (*User, error
 	}
 
 	return nil, ErrNotExists
+}
+
+func (d *DynamoDB) Scan(ctx context.Context, f func(*User) error) error {
+	paginator := dynamodb.NewScanPaginator(d.client, &dynamodb.ScanInput{
+		TableName: aws.String(d.tableName),
+	})
+	for paginator.HasMorePages() {
+		out, err := paginator.NextPage(ctx)
+		if err != nil {
+			return err
+		}
+
+		for _, item := range out.Items {
+			var rec DynamoDBRecord
+			if err := attributevalue.UnmarshalMap(item, &rec); err != nil {
+				return err
+			}
+
+			if err := f(dynamoToUser(&rec)); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 func (d *DynamoDB) Put(ctx context.Context, user *User) error {

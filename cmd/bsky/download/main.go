@@ -35,8 +35,20 @@ func (c *command) SetFlags(f *flag.FlagSet) {
 }
 
 func (c *command) Execute(ctx context.Context, f *flag.FlagSet, args ...interface{}) subcommands.ExitStatus {
-	client := args[0].(*xrpc.Client)
-	auth := args[1].(*atproto.ServerCreateSession_Output)
+	if len(args) < 2 {
+		slog.Error("arguments not found")
+		return subcommands.ExitFailure
+	}
+	client, ok := args[0].(*xrpc.Client)
+	if !ok {
+		slog.Error("unexpected type", "arg", args[0])
+		return subcommands.ExitFailure
+	}
+	auth, ok := args[1].(*atproto.ServerCreateSession_Output)
+	if !ok {
+		slog.Error("unexpected type", "arg", args[1])
+		return subcommands.ExitFailure
+	}
 
 	file, err := os.Create(*c.filename)
 	if err != nil {

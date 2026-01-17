@@ -40,8 +40,7 @@ func main() {
 		defer f.Close()
 		dec := json.NewDecoder(f)
 		if err := dec.Decode(&cfg); err != nil {
-			slog.Error("config file decode error", "path", *configPath, "err", err)
-			os.Exit(1)
+			slog.Warn("config file decode error", "path", *configPath, "err", err)
 		}
 	}
 

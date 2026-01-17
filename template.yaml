@@ -95,6 +95,17 @@ Resources:
           Projection:
             ProjectionType: ALL
 
+  CrawlerTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: Did
+          AttributeType: S
+      KeySchema:
+        - AttributeName: Did
+          KeyType: HASH
+
 Outputs:
   PublishBucket:
     Value: !Ref PublishBucket
@@ -104,3 +115,5 @@ Outputs:
     Value: !Ref Distribution
   UserTable:
     Value: !Ref UserTable
+  CrawlerTable:
+    Value: !Ref CrawlerTable

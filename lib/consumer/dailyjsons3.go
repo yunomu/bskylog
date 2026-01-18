@@ -22,11 +22,18 @@ type S3Client interface {
 	GetObject(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error)
 }
 
+type TerminalValue struct {
+	TimeStamp int64
+	Cid       string
+}
+
 type DailyJSONRecordS3 struct {
 	s3Client S3Client
 	bucket   string
 	baseDir  string
 	location *time.Location
+
+	terminalValue *TerminalValue
 
 	year  int
 	month time.Month
@@ -35,6 +42,9 @@ type DailyJSONRecordS3 struct {
 	key     string
 	buf     *bytes.Buffer
 	encoder *json.Encoder
+
+	first     func(*TerminalValue)
+	saveFirst func(int64, string)
 
 	logger *slog.Logger
 }
@@ -53,6 +63,18 @@ func SetDailyJSONRecordS3Logger(logger *slog.Logger) DailyJSONRecordS3Option {
 	}
 }
 
+func SetDailyJSONRecordS3TerminalValue(v *TerminalValue) DailyJSONRecordS3Option {
+	return func(c *DailyJSONRecordS3) {
+		c.terminalValue = v
+	}
+}
+
+func SetDailyJSONRecordS3FirstValueFunc(f func(v *TerminalValue)) DailyJSONRecordS3Option {
+	return func(c *DailyJSONRecordS3) {
+		c.first = f
+	}
+}
+
 func NewDailyJSONRecordS3(
 	s3Client S3Client,
 	bucket string,
@@ -65,10 +87,18 @@ func NewDailyJSONRecordS3(
 		bucket:   bucket,
 		baseDir:  baseDir,
 		location: location,
+		first:    func(*TerminalValue) {},
 		logger:   slog.Default(),
 	}
 	for _, f := range opts {
 		f(ret)
+	}
+	ret.saveFirst = func(ts int64, cid string) {
+		ret.first(&TerminalValue{
+			TimeStamp: ts,
+			Cid:       cid,
+		})
+		ret.saveFirst = func(int64, string) {}
 	}
 	return ret
 }
@@ -116,6 +146,12 @@ func (c *DailyJSONRecordS3) Consume(ctx context.Context, post *bsky.FeedDefs_Fee
 	}
 	t = t.In(c.location)
 
+	if c.terminalValue != nil {
+		if c.terminalValue.Cid == post.Post.Cid || c.terminalValue.TimeStamp >= t.Unix() {
+			return nil
+		}
+	}
+
 	if err := c.ensureStream(ctx, t); err != nil {
 		c.logger.Error("ensureStream() error",
 			"baseDir", c.baseDir,
@@ -127,6 +163,7 @@ func (c *DailyJSONRecordS3) Consume(ctx context.Context, post *bsky.FeedDefs_Fee
 	if err := c.encoder.Encode(post); err != nil {
 		return err
 	}
+	c.saveFirst(t.Unix(), post.Post.Cid)
 
 	c.logger.Info("Consume", "time", record.CreatedAt, "cid", post.Post.Cid)
 	return nil

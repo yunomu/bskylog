@@ -12,10 +12,6 @@ type Scanner interface {
 	Scan(ctx context.Context, filter string, includePins bool, f func([]*bsky.FeedDefs_FeedViewPost) error) error
 }
 
-type TerminalValue struct {
-	timeStamp int64
-}
-
 type XRPCScanner struct {
 	client lexutil.LexClient
 	actor  string

@@ -10,7 +10,7 @@ var ErrNotExists = errors.New("not exists")
 type Timestamp struct {
 	Did       string
 	LatestCid string
-	Timestamp uint64
+	Timestamp int64
 }
 
 type DB interface {

@@ -66,7 +66,7 @@ func (c *command) Execute(ctx context.Context, f *flag.FlagSet, args ...interfac
 	if err := client.Put(ctx, &crawlerdb.Timestamp{
 		Did:       *c.did,
 		LatestCid: *c.latest,
-		Timestamp: uint64(ts.Unix()),
+		Timestamp: ts.Unix(),
 	}); err != nil {
 		slog.Error("Put", "err", err)
 		return subcommands.ExitFailure

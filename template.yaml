@@ -185,7 +185,7 @@ Resources:
         ScheduleEvent:
           Type: ScheduleV2
           Properties:
-            ScheduleExpression: "cron(10 10 * * ? *)"
+            ScheduleExpression: "cron(10 23 * * ? *)"
 
   TriggerFunctionPolicy:
     Type: AWS::IAM::Policy

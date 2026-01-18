@@ -13,6 +13,16 @@ Parameters:
   HandleIndex:
     Type: String
     Default: HandleIndex
+  BskyHost:
+    Type: String
+    Default: "https://bsky.social"
+
+Globals:
+  Function:
+    Runtime: provided.al2023
+    Handler: bootstrap
+    Architectures:
+      - x86_64
 
 Resources:
   PublishBucket:
@@ -56,7 +66,7 @@ Resources:
           - !Ref SiteDomainName
         ViewerCertificate:
           AcmCertificateArn: !Ref Certificate
-          MinimumProtocolVersion: TLSv1.2_2025
+          MinimumProtocolVersion: TLSv1.2_2021
           SslSupportMethod: sni-only
         DefaultCacheBehavior:
           CachePolicyId: !Ref CloudFrontManagedCachePolicy
@@ -106,6 +116,57 @@ Resources:
         - AttributeName: Did
           KeyType: HASH
 
+  CrawlerFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      PackageType: Zip
+      CodeUri: crawler/
+      Timeout: 900
+      Environment:
+        Variables:
+          REGION: !Ref AWS::Region
+          BUCKET: !Ref PublishBucket
+          DISTRIBUTION: !Ref Distribution
+          CRAWLER_TABLE: !Ref CrawlerTable
+          BSKY_HOST: !Ref BskyHost
+
+  CrawlerFunctionPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: CrawlerFunctionPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:GetItem
+              - dynamodb:PutItem
+              - dynamodb:Scan
+            Resource:
+              - !GetAtt CrawlerTable.Arn
+          - Effect: Allow
+            Action:
+              - cloudfront:CreateInvalidation
+            Resource:
+              - !Sub "arn:aws:cloudfront::${AWS::AccountId}:distribution/${Distribution}"
+          - Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:GetObject
+              - s3:ListObjects
+              - s3:ListObjectsV2
+            Resource:
+              - !Sub "arn:aws:s3:::${PublishBucket}/did:*"
+          - Effect: Allow
+            Action:
+              - s3:ListBucket
+            Resource:
+              - !Sub "arn:aws:s3:::${PublishBucket}"
+      Roles:
+        - !Ref CrawlerFunctionRole
+
 Outputs:
   PublishBucket:
     Value: !Ref PublishBucket
@@ -117,3 +178,5 @@ Outputs:
     Value: !Ref UserTable
   CrawlerTable:
     Value: !Ref CrawlerTable
+  CrawlerFunction:
+    Value: !Ref CrawlerFunction

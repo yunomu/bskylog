@@ -3,13 +3,16 @@ module github.com/yunomu/bskylog
 go 1.25
 
 require (
+	github.com/aws/aws-lambda-go v1.52.0
 	github.com/aws/aws-sdk-go-v2 v1.41.1
 	github.com/aws/aws-sdk-go-v2/config v1.32.7
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.20.30
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/expression v1.8.30
 	github.com/aws/aws-sdk-go-v2/service/cloudformation v1.71.5
+	github.com/aws/aws-sdk-go-v2/service/cloudfront v1.59.0
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.53.6
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.95.1
+	github.com/aws/smithy-go v1.24.0
 	github.com/bluesky-social/indigo v0.0.0-20251223190123-598fbf0e146e
 	github.com/google/subcommands v1.2.0
 )
@@ -32,7 +35,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.30.9 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.13 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.41.6 // indirect
-	github.com/aws/smithy-go v1.24.0 // indirect
 	github.com/earthboundkid/versioninfo/v2 v2.24.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect

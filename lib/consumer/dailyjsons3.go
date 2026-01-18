@@ -45,6 +45,7 @@ type DailyJSONRecordS3 struct {
 
 	first     func(*TerminalValue)
 	saveFirst func(int64, string)
+	keyUpdate func(string)
 
 	logger *slog.Logger
 }
@@ -75,6 +76,12 @@ func SetDailyJSONRecordS3FirstValueFunc(f func(v *TerminalValue)) DailyJSONRecor
 	}
 }
 
+func SetDailyJSONRecordS3KeyUpdateFunc(f func(string)) DailyJSONRecordS3Option {
+	return func(c *DailyJSONRecordS3) {
+		c.keyUpdate = f
+	}
+}
+
 func NewDailyJSONRecordS3(
 	s3Client S3Client,
 	bucket string,
@@ -83,12 +90,13 @@ func NewDailyJSONRecordS3(
 	opts ...DailyJSONRecordS3Option,
 ) *DailyJSONRecordS3 {
 	ret := &DailyJSONRecordS3{
-		s3Client: s3Client,
-		bucket:   bucket,
-		baseDir:  baseDir,
-		location: location,
-		first:    func(*TerminalValue) {},
-		logger:   slog.Default(),
+		s3Client:  s3Client,
+		bucket:    bucket,
+		baseDir:   baseDir,
+		location:  location,
+		first:     func(*TerminalValue) {},
+		keyUpdate: func(string) {},
+		logger:    slog.Default(),
 	}
 	for _, f := range opts {
 		f(ret)
@@ -109,7 +117,9 @@ func (c *DailyJSONRecordS3) ensureStream(ctx context.Context, now time.Time) err
 		return nil
 	}
 
-	c.Close(ctx)
+	if err := c.Close(ctx); err != nil {
+		return err
+	}
 
 	c.year = year
 	c.month = month
@@ -190,23 +200,26 @@ func (c *DailyJSONRecordS3) appendObject(ctx context.Context) error {
 	}
 	defer s3Out.Body.Close()
 
-	_, err = c.buf.ReadFrom(s3Out.Body)
+	if _, err = c.buf.ReadFrom(s3Out.Body); err != nil {
+		return err
+	}
 
-	return err
+	c.keyUpdate(c.key)
+
+	return nil
 }
 
-func (c *DailyJSONRecordS3) Close(ctx context.Context) {
+func (c *DailyJSONRecordS3) Close(ctx context.Context) error {
 	if c.buf == nil {
-		return
+		return nil
 	}
 
 	if err := c.appendObject(ctx); err != nil {
 		c.logger.Error("appendObject",
-			"err", err,
 			"bucket", c.bucket,
 			"key", c.key,
 		)
-		return
+		return err
 	}
 
 	if _, err := c.s3Client.PutObject(ctx, &s3.PutObjectInput{
@@ -215,10 +228,11 @@ func (c *DailyJSONRecordS3) Close(ctx context.Context) {
 		Body:   c.buf,
 	}); err != nil {
 		c.logger.Error("s3.PutObject",
-			"err", err,
 			"bucket", c.bucket,
 			"key", c.key,
 		)
-		return
+		return err
 	}
+
+	return nil
 }

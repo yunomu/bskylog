@@ -70,7 +70,7 @@ func (c *command) Execute(ctx context.Context, f *flag.FlagSet, args ...interfac
 			file,
 		),
 	)
-	defer p.Close()
+	defer p.Close(ctx)
 
 	slog.Debug("Started retrieving posts...")
 	if err := p.Proc(ctx); err != nil {

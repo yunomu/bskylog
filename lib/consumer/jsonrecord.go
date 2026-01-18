@@ -24,5 +24,5 @@ func (c *JSONRecord) Consume(ctx context.Context, post *bsky.FeedDefs_FeedViewPo
 	return c.encoder.Encode(post)
 }
 
-func (c *JSONRecord) Close() {
+func (c *JSONRecord) Close(_ context.Context) {
 }

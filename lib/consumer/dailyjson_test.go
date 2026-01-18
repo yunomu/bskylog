@@ -50,7 +50,7 @@ func TestDailyJSONRecord_ensureStream(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	c := NewDailyJSONRecord(dir)
-	defer c.Close()
+	defer c.Close(nil)
 
 	now := time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)
 	if err := c.ensureStream(now); err != nil {
@@ -75,7 +75,7 @@ func TestDailyJSONRecord_ensureStream_append(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		defer f.Close()
+		defer f.Close(nil)
 
 		if _, err := fmt.Fprintln(f, "1"); err != nil {
 			return err
@@ -88,7 +88,7 @@ func TestDailyJSONRecord_ensureStream_append(t *testing.T) {
 
 	if err := func() error {
 		c := NewDailyJSONRecord(dir)
-		defer c.Close()
+		defer c.Close(nil)
 
 		now := time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC)
 		if err := c.ensureStream(now); err != nil {

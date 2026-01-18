@@ -8,5 +8,5 @@ import (
 
 type Consumer interface {
 	Consume(ctx context.Context, post *bsky.FeedDefs_FeedViewPost) error
-	Close()
+	Close(ctx context.Context)
 }

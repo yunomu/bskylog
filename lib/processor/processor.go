@@ -40,6 +40,6 @@ func (p *Processor) Proc(ctx context.Context) error {
 	return nil
 }
 
-func (p *Processor) Close() {
-	p.consumer.Close()
+func (p *Processor) Close(ctx context.Context) {
+	p.consumer.Close(ctx)
 }

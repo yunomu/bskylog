@@ -74,7 +74,7 @@ func (c *DailyJSONRecord) ensureStream(now time.Time) error {
 		return nil
 	}
 
-	c.Close()
+	c.Close(nil)
 
 	c.year = year
 	c.month = month
@@ -146,7 +146,7 @@ func (c *DailyJSONRecord) Consume(ctx context.Context, post *bsky.FeedDefs_FeedV
 	return nil
 }
 
-func (c *DailyJSONRecord) Close() {
+func (c *DailyJSONRecord) Close(_ context.Context) {
 	if c.w != nil {
 		c.w.Close()
 	}

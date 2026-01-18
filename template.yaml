@@ -167,6 +167,46 @@ Resources:
       Roles:
         - !Ref CrawlerFunctionRole
 
+  TriggerFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      PackageType: Zip
+      CodeUri: trigger/
+      Timeout: 10
+      Environment:
+        Variables:
+          REGION: !Ref AWS::Region
+          CRAWLER_FUNCTION: !Ref CrawlerFunction
+          USER_TABLE: !Ref UserTable
+          USER_HANDLE_INDEX: !Ref HandleIndex
+      Events:
+        ScheduleEvent:
+          Type: ScheduleV2
+          Properties:
+            ScheduleExpression: "cron(10 10 * * ? *)"
+
+  TriggerFunctionPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: TriggerFunctionPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:Scan
+            Resource:
+              - !GetAtt UserTable.Arn
+          - Effect: Allow
+            Action:
+              - lambda:InvokeFunction
+            Resource:
+              - !GetAtt CrawlerFunction.Arn
+      Roles:
+        - !Ref TriggerFunctionRole
+
 Outputs:
   PublishBucket:
     Value: !Ref PublishBucket
@@ -180,3 +220,5 @@ Outputs:
     Value: !Ref CrawlerTable
   CrawlerFunction:
     Value: !Ref CrawlerFunction
+  TriggerFunction:
+    Value: !Ref TriggerFunction

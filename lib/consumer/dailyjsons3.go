@@ -115,7 +115,7 @@ func (c *DailyJSONRecordS3) ensureStream(ctx context.Context, now time.Time) err
 	c.month = month
 	c.day = day
 
-	c.key = fmt.Sprintf("%d/%04d/%02d/%02d", c.baseDir, year, int(month), day)
+	c.key = fmt.Sprintf("%s/%04d/%02d/%02d", c.baseDir, year, int(month), day)
 
 	c.buf = &bytes.Buffer{}
 

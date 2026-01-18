@@ -75,7 +75,7 @@ func TestDailyJSONRecord_ensureStream_append(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		defer f.Close(nil)
+		defer f.Close()
 
 		if _, err := fmt.Fprintln(f, "1"); err != nil {
 			return err

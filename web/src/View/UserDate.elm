@@ -267,22 +267,29 @@ viewFeed feed =
             }
         , Element.paddingXY 0 10
         ]
-        [ Element.image
-            [ Element.width (px 48)
-            , Element.height (px 48)
-            , Element.alignTop
-            ]
-            { src = feed.post.author.avatar
-            , description = ""
+        [ Element.link [ Element.alignTop ]
+            { url = "https://bsky.app/profile/" ++ feed.post.author.handle
+            , label =
+                Element.image
+                    [ Element.width (px 48)
+                    , Element.height (px 48)
+                    ]
+                    { src = feed.post.author.avatar
+                    , description = ""
+                    }
             }
         , Element.column
             [ Element.width (px 600)
             , Element.spacing 10
             ]
-            [ Element.row [ Element.spacing 5 ]
-                [ Element.text feed.post.author.displayName
-                , Element.text <| "@" ++ feed.post.author.handle
-                ]
+            [ Element.link []
+                { url = "https://bsky.app/profile/" ++ feed.post.author.handle
+                , label =
+                    Element.row [ Element.spacing 5 ]
+                        [ Element.text feed.post.author.displayName
+                        , Element.text <| "@" ++ feed.post.author.handle
+                        ]
+                }
             , postText feed.post.record
             , case feed.post.embed of
                 Just embed ->

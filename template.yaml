@@ -16,6 +16,8 @@ Parameters:
   BskyHost:
     Type: String
     Default: "https://bsky.social"
+  Cron:
+    Type: String
 
 Globals:
   Function:
@@ -185,7 +187,7 @@ Resources:
         ScheduleEvent:
           Type: ScheduleV2
           Properties:
-            ScheduleExpression: "cron(10 23 * * ? *)"
+            ScheduleExpression: !Ref Cron
 
   TriggerFunctionPolicy:
     Type: AWS::IAM::Policy

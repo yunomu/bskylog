@@ -44,5 +44,5 @@ $(TARGET): $(PUBLISH_DIR) $(UGLIFIED)
 $(PUBLISH_DIR)/%: $(RESOURCE_DIR)/%
 	cp $< $@
 
-release: clean $(TARGET) $(RESOURCES_PUB)
+release: $(TARGET) $(RESOURCES_PUB)
 	rm -rf $(TMPDIR)

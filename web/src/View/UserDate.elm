@@ -300,6 +300,25 @@ viewPost small post reply =
             ]
             [ Lib.maybe Element.none
                 (\r ->
+                    if r.parent.cid == r.root.cid then
+                        Element.none
+
+                    else
+                        Element.link []
+                            { url = postUrl r.root
+                            , label =
+                                Element.el
+                                    [ Element.paddingXY 10 0
+                                    , Font.size 15
+                                    , Font.color (Element.rgba255 0 0 0 0.7)
+                                    ]
+                                <|
+                                    Element.text "Thread"
+                            }
+                )
+                reply
+            , Lib.maybe Element.none
+                (\r ->
                     Element.el
                         [ Border.width 1
                         , Border.rounded 3

@@ -3,9 +3,10 @@ module View.UserDate exposing (view)
 import Element exposing (Attribute, Element, px)
 import Element.Border as Border
 import Element.Font as Font
-import Feed exposing (Embed, External, Facet, Feed, Image, Post, Record, Video)
+import Feed exposing (Embed, External, Facet, Feed, Image, Post, Record, Reply, Video)
 import Html exposing (Html)
 import Html.Attributes as Attr
+import Lib
 import String.UTF8 as UTF8
 
 
@@ -255,11 +256,91 @@ embedView embed =
                 externalView external
 
 
-viewFeed : Feed -> Element msg
-viewFeed feed =
+viewPost : Bool -> Post -> Maybe Reply -> Element msg
+viewPost small post reply =
+    let
+        iconSize =
+            if small then
+                36
+
+            else
+                48
+
+        width =
+            if small then
+                500
+
+            else
+                600
+
+        timestampSize =
+            if small then
+                12
+
+            else
+                15
+    in
     Element.row
         [ Element.spacing 10
-        , Border.widthEach
+        ]
+        [ Element.link [ Element.alignTop ]
+            { url = "https://bsky.app/profile/" ++ post.author.handle
+            , label =
+                Element.image
+                    [ Element.width (px iconSize)
+                    , Element.height (px iconSize)
+                    ]
+                    { src = post.author.avatar
+                    , description = ""
+                    }
+            }
+        , Element.column
+            [ Element.width (px width)
+            , Element.spacing 10
+            ]
+            [ Lib.maybe Element.none
+                (\r ->
+                    Element.el
+                        [ Border.width 1
+                        , Border.rounded 3
+                        , Font.size 17
+                        ]
+                    <|
+                        Element.el [ Element.padding 3 ] <|
+                            viewPost True r.parent Nothing
+                )
+                reply
+            , Element.link []
+                { url = "https://bsky.app/profile/" ++ post.author.handle
+                , label =
+                    Element.row [ Element.spacing 5 ]
+                        [ Element.text post.author.displayName
+                        , Element.text <| "@" ++ post.author.handle
+                        ]
+                }
+            , postText post.record
+            , case post.embed of
+                Just embed ->
+                    embedView embed
+
+                Nothing ->
+                    Element.none
+            , Element.link [ Font.size timestampSize ]
+                { url = postUrl post
+                , label =
+                    Element.text <|
+                        formatHMS ( 9, 0 ) <|
+                            toHMS <|
+                                post.record.createdAt
+                }
+            ]
+        ]
+
+
+viewFeed : Feed -> Element msg
+viewFeed feed =
+    Element.el
+        [ Border.widthEach
             { bottom = 0
             , left = 0
             , right = 0
@@ -267,46 +348,8 @@ viewFeed feed =
             }
         , Element.paddingXY 0 10
         ]
-        [ Element.link [ Element.alignTop ]
-            { url = "https://bsky.app/profile/" ++ feed.post.author.handle
-            , label =
-                Element.image
-                    [ Element.width (px 48)
-                    , Element.height (px 48)
-                    ]
-                    { src = feed.post.author.avatar
-                    , description = ""
-                    }
-            }
-        , Element.column
-            [ Element.width (px 600)
-            , Element.spacing 10
-            ]
-            [ Element.link []
-                { url = "https://bsky.app/profile/" ++ feed.post.author.handle
-                , label =
-                    Element.row [ Element.spacing 5 ]
-                        [ Element.text feed.post.author.displayName
-                        , Element.text <| "@" ++ feed.post.author.handle
-                        ]
-                }
-            , postText feed.post.record
-            , case feed.post.embed of
-                Just embed ->
-                    embedView embed
-
-                Nothing ->
-                    Element.none
-            , Element.link [ Font.size 15 ]
-                { url = postUrl feed.post
-                , label =
-                    Element.text <|
-                        formatHMS ( 9, 0 ) <|
-                            toHMS <|
-                                feed.post.record.createdAt
-                }
-            ]
-        ]
+    <|
+        viewPost False feed.post feed.reply
 
 
 view : String -> String -> String -> String -> List Feed -> Element msg

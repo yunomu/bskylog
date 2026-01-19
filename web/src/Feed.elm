@@ -9,6 +9,7 @@ module Feed exposing
     , Index
     , Post
     , Record
+    , Reply
     , Video
     , decoder
     )
@@ -199,18 +200,37 @@ type alias Post =
     }
 
 
+post : Decoder Post
+post =
+    D.map5 Post
+        (D.field "author" author)
+        (D.field "cid" D.string)
+        (D.maybe <| D.field "embed" embed)
+        (D.field "record" record)
+        (D.field "uri" D.string)
+
+
+type alias Reply =
+    { parent : Post
+    , root : Post
+    }
+
+
+reply : Decoder Reply
+reply =
+    D.map2 Reply
+        (D.field "parent" post)
+        (D.field "root" post)
+
+
 type alias Feed =
     { post : Post
+    , reply : Maybe Reply
     }
 
 
 decoder : Decoder Feed
 decoder =
-    D.map Feed <|
-        D.field "post" <|
-            D.map5 Post
-                (D.field "author" author)
-                (D.field "cid" D.string)
-                (D.maybe <| D.field "embed" embed)
-                (D.field "record" record)
-                (D.field "uri" D.string)
+    D.map2 Feed
+        (D.field "post" post)
+        (D.maybe <| D.field "reply" reply)

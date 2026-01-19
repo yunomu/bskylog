@@ -1,4 +1,9 @@
-module Lib exposing (foldResult)
+module Lib exposing (foldResult, maybe)
+
+
+maybe : b -> (a -> b) -> Maybe a -> b
+maybe b f =
+    Maybe.withDefault b << Maybe.map f
 
 
 cons : a -> List a -> List a

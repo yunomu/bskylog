@@ -3,10 +3,14 @@ package consumer
 import (
 	"bytes"
 	"context"
+	"encoding/csv"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
+	"sort"
+	"strconv"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -39,9 +43,11 @@ type DailyJSONRecordS3 struct {
 	month time.Month
 	day   int
 
-	key     string
-	buf     *bytes.Buffer
-	encoder *json.Encoder
+	key      string
+	buf      *bytes.Buffer
+	encoder  *json.Encoder
+	index    map[int]int
+	indexKey string
 
 	first     func(*TerminalValue)
 	saveFirst func(int64, string)
@@ -131,6 +137,68 @@ func (c *DailyJSONRecordS3) ensureStream(ctx context.Context, now time.Time) err
 
 	c.encoder = json.NewEncoder(c.buf)
 
+	c.index = make(map[int]int)
+	c.indexKey = fmt.Sprintf("%s/%04d/%02d/index", c.baseDir, year, int(month))
+	out, err := c.s3Client.GetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(c.bucket),
+		Key:    aws.String(c.indexKey),
+	})
+	if err != nil {
+		var opErr *smithy.OperationError
+		var noSuchKey *types.NoSuchKey
+		if errors.As(err, &opErr) && errors.As(opErr.Err, &noSuchKey) {
+			// do nothing
+		} else {
+			c.logger.Error("s3.GetObject(index)",
+				"bucket", c.bucket,
+				"key", c.indexKey,
+			)
+			return err
+		}
+	} else {
+		defer out.Body.Close()
+
+		r := csv.NewReader(out.Body)
+
+		// skip header
+		_, err := r.Read()
+		if err != nil {
+			c.logger.Error("CSV read error (skip header)")
+			return err
+		}
+
+		for {
+			fields, err := r.Read()
+			if err == io.EOF {
+				break
+			} else if err != nil {
+				c.logger.Error("CSV read error")
+				return err
+			}
+			if len(fields) == 0 {
+				break
+			}
+
+			d, err := strconv.Atoi(fields[0])
+			if err != nil {
+				c.logger.Error("atoi index day field",
+					"fields[0]", fields[0],
+				)
+				return err
+			}
+			cnt, err := strconv.Atoi(fields[1])
+			if err != nil {
+				c.logger.Error("atoi index count field",
+					"fields[1]", fields[1],
+				)
+				return err
+			}
+			c.index[d] = cnt
+		}
+
+		c.keyUpdate(c.indexKey)
+	}
+
 	return nil
 }
 
@@ -174,6 +242,7 @@ func (c *DailyJSONRecordS3) Consume(ctx context.Context, post *bsky.FeedDefs_Fee
 		return err
 	}
 	c.saveFirst(t.Unix(), post.Post.Cid)
+	c.index[t.Day()]++
 
 	c.logger.Info("Consume", "time", record.CreatedAt, "cid", post.Post.Cid)
 	return nil
@@ -209,6 +278,17 @@ func (c *DailyJSONRecordS3) appendObject(ctx context.Context) error {
 	return nil
 }
 
+type entry struct {
+	day   int
+	count int
+}
+
+type entrySlice []*entry
+
+func (e entrySlice) Len() int               { return len(e) }
+func (e entrySlice) Less(i int, j int) bool { return e[i].day < e[j].day }
+func (e entrySlice) Swap(i int, j int)      { e[i], e[j] = e[j], e[i] }
+
 func (c *DailyJSONRecordS3) Close(ctx context.Context) error {
 	if c.buf == nil {
 		return nil
@@ -230,6 +310,41 @@ func (c *DailyJSONRecordS3) Close(ctx context.Context) error {
 		c.logger.Error("s3.PutObject",
 			"bucket", c.bucket,
 			"key", c.key,
+		)
+		return err
+	}
+
+	var index []*entry
+	for k, v := range c.index {
+		index = append(index, &entry{day: k, count: v})
+	}
+	sort.Sort(entrySlice(index))
+
+	var buf bytes.Buffer
+	w := csv.NewWriter(&buf)
+	if err := w.Write([]string{"day", "count"}); err != nil {
+		c.logger.Error("index csv write header")
+		return err
+	}
+	for _, e := range index {
+		if err := w.Write([]string{
+			fmt.Sprintf("%02d", e.day),
+			fmt.Sprintf("%d", e.count),
+		}); err != nil {
+			c.logger.Error("index csv write field error")
+			return err
+		}
+	}
+	w.Flush()
+
+	if _, err := c.s3Client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket: aws.String(c.bucket),
+		Key:    aws.String(c.indexKey),
+		Body:   &buf,
+	}); err != nil {
+		c.logger.Error("s3.PutObject(index)",
+			"bucket", c.bucket,
+			"key", c.indexKey,
 		)
 		return err
 	}

@@ -169,6 +169,7 @@ type Embed
     = EmbeddedImage (List Image)
     | EmbeddedVideo Video
     | EmbeddedExternal External
+    | EmbeddedPost Post
 
 
 embed : Decoder Embed
@@ -185,6 +186,9 @@ embed =
 
                     "app.bsky.embed.external#view" ->
                         D.map EmbeddedExternal <| D.field "external" external
+
+                    "app.bsky.embed.record#view" ->
+                        D.map EmbeddedPost <| D.field "record" embeddedPost
 
                     _ ->
                         D.fail <| "unknown embed type: " ++ t
@@ -207,6 +211,16 @@ post =
         (D.field "cid" D.string)
         (D.maybe <| D.field "embed" embed)
         (D.field "record" record)
+        (D.field "uri" D.string)
+
+
+embeddedPost : Decoder Post
+embeddedPost =
+    D.map5 Post
+        (D.field "author" author)
+        (D.field "cid" D.string)
+        (D.maybe <| D.field "embed" embed)
+        (D.field "value" record)
         (D.field "uri" D.string)
 
 

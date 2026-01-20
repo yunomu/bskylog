@@ -255,6 +255,17 @@ embedView embed =
             Feed.EmbeddedExternal external ->
                 externalView external
 
+            Feed.EmbeddedPost post ->
+                Element.el
+                    [ Border.rounded 3
+                    , Border.width 1
+                    , Element.width (px 550)
+                    , Font.size 17
+                    ]
+                <|
+                    Element.el [ Element.padding 3 ] <|
+                        viewPost True post Nothing
+
 
 viewPost : Bool -> Post -> Maybe Reply -> Element msg
 viewPost small post reply =

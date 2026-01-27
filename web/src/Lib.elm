@@ -1,4 +1,6 @@
-module Lib exposing (foldResult, maybe)
+module Lib exposing (any, foldResult, maybe, perform)
+
+import Task
 
 
 maybe : b -> (a -> b) -> Maybe a -> b
@@ -24,3 +26,22 @@ foldResult xs =
 
         [] ->
             Ok []
+
+
+any : List Bool -> Bool
+any ls =
+    case ls of
+        x :: xs ->
+            if x then
+                True
+
+            else
+                any xs
+
+        [] ->
+            False
+
+
+perform : (a -> msg) -> a -> Cmd msg
+perform f =
+    Task.perform f << Task.succeed

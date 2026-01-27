@@ -1,4 +1,10 @@
-module View.Day exposing (view)
+module View.Day exposing
+    ( Model
+    , Msg(..)
+    , init
+    , update
+    , view
+    )
 
 import Element exposing (Attribute, Element, px)
 import Element.Border as Border
@@ -8,6 +14,58 @@ import Html exposing (Html)
 import Html.Attributes as Attr
 import Lib
 import String.UTF8 as UTF8
+import Task
+
+
+type alias Model =
+    { user : String
+    , year : String
+    , month : String
+    , day : String
+    , feeds : List Feed
+    }
+
+
+init : Model
+init =
+    Model "" "" "" "" []
+
+
+type Msg
+    = UpdateDay String String String String
+    | UpdateFeeds (List Feed)
+    | FetchFeeds String String String String
+
+
+update : (Msg -> msg) -> Msg -> Model -> ( Model, Cmd msg )
+update toMsg msg model =
+    case msg of
+        UpdateDay user year month day ->
+            if
+                Lib.any
+                    [ user /= model.user
+                    , year /= model.year
+                    , month /= model.month
+                    , day /= model.day
+                    ]
+            then
+                ( { model
+                    | user = user
+                    , year = year
+                    , month = month
+                    , day = day
+                  }
+                , Lib.perform toMsg <| FetchFeeds user year month day
+                )
+
+            else
+                ( model, Cmd.none )
+
+        UpdateFeeds feeds ->
+            ( { model | feeds = feeds }, Cmd.none )
+
+        _ ->
+            ( model, Cmd.none )
 
 
 type Text
@@ -382,8 +440,8 @@ viewFeed feed =
         viewPost False feed.post feed.reply
 
 
-view : String -> String -> String -> String -> List Feed -> Element msg
-view user year month day feeds =
+view : Model -> Element msg
+view model =
     Element.column
         [ Element.spacing 10
         , Element.paddingXY 30 0
@@ -391,12 +449,12 @@ view user year month day feeds =
         [ Element.row []
             [ Element.text "Date:"
             , Element.row []
-                [ Element.text year
+                [ Element.text model.year
                 , Element.text "/"
-                , Element.text month
+                , Element.text model.month
                 , Element.text "/"
-                , Element.text day
+                , Element.text model.day
                 ]
             ]
-        , Element.column [] <| List.map viewFeed feeds
+        , Element.column [] <| List.map viewFeed model.feeds
         ]

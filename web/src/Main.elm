@@ -34,6 +34,7 @@ type Msg
     | OnResize Int Int
     | InitFetchUserCsv (Cmd Msg) (Result Http.Error String)
     | FetchLog (Result Http.Error String)
+    | DayMsg View.Day.Msg
 
 
 type alias Model =
@@ -41,7 +42,7 @@ type alias Model =
     , route : Route
     , windowSize : ( Int, Int )
     , userAliases : Dict String String
-    , feeds : List Feed
+    , dayModel : View.Day.Model
     }
 
 
@@ -51,7 +52,7 @@ init flags url key =
       , route = Route.fromUrl url
       , windowSize = ( flags.windowWidth, flags.windowHeight )
       , userAliases = Dict.empty
-      , feeds = []
+      , dayModel = View.Day.init
       }
     , Cmd.batch
         [ HttpLib.get (InitFetchUserCsv (Nav.pushUrl key (Url.toString url))) "/users"
@@ -75,19 +76,23 @@ update msg model =
                 route =
                     Route.fromUrl url
             in
-            ( { model | route = route }
-            , case route of
+            case route of
                 Route.Day user year month day ->
                     case Dict.get user model.userAliases of
                         Just did ->
-                            HttpLib.get FetchLog <| UrlBuilder.absolute [ did, year, month, day ] []
+                            ( { model | route = route }
+                            , Lib.perform DayMsg <| View.Day.UpdateDay user year month day
+                            )
 
                         Nothing ->
-                            Nav.pushUrl model.key "/"
+                            ( { model | route = route }
+                            , Nav.pushUrl model.key "/"
+                            )
 
                 _ ->
-                    Cmd.none
-            )
+                    ( { model | route = route }
+                    , Cmd.none
+                    )
 
         OnResize w h ->
             ( { model | windowSize = ( w, h ) }
@@ -113,10 +118,41 @@ update msg model =
             in
             case HttpLib.andThen decodeLog res of
                 Ok feeds ->
-                    ( { model | feeds = feeds }, Cmd.none )
+                    let
+                        ( dayModel, dayCmd ) =
+                            View.Day.update DayMsg (View.Day.UpdateFeeds feeds) model.dayModel
+                    in
+                    ( { model
+                        | dayModel = dayModel
+                      }
+                    , dayCmd
+                    )
 
                 Err err ->
                     ( model, Cmd.none )
+
+        DayMsg dayMsg ->
+            let
+                ( dayModel, dayCmd ) =
+                    View.Day.update DayMsg dayMsg model.dayModel
+            in
+            case dayMsg of
+                View.Day.FetchFeeds user year month day ->
+                    case Dict.get user model.userAliases of
+                        Just did ->
+                            ( { model | dayModel = dayModel }
+                            , HttpLib.get FetchLog <| UrlBuilder.absolute [ did, year, month, day ] []
+                            )
+
+                        Nothing ->
+                            ( { model | dayModel = dayModel }
+                            , dayCmd
+                            )
+
+                _ ->
+                    ( { model | dayModel = dayModel }
+                    , dayCmd
+                    )
 
 
 subscriptions : Model -> Sub Msg
@@ -142,7 +178,7 @@ view model =
                         View.Index.view
 
                     Route.Day user year month day ->
-                        Lazy.lazy5 View.Day.view user year month day model.feeds
+                        Lazy.lazy View.Day.view model.dayModel
 
                     _ ->
                         View.Index.view

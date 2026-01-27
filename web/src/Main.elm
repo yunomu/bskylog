@@ -17,9 +17,9 @@ import Url exposing (Url)
 import Url.Builder as UrlBuilder
 import UserAliases
 import View
+import View.Day
 import View.Index
 import View.Org.Header
-import View.UserDate
 
 
 type alias Flags =
@@ -77,7 +77,7 @@ update msg model =
             in
             ( { model | route = route }
             , case route of
-                Route.UserDate user year month day ->
+                Route.Day user year month day ->
                     case Dict.get user model.userAliases of
                         Just did ->
                             HttpLib.get FetchLog <| UrlBuilder.absolute [ did, year, month, day ] []
@@ -126,7 +126,13 @@ subscriptions _ =
 
 view : Model -> Browser.Document Msg
 view model =
-    { title = "Bskylog"
+    { title =
+        case model.route of
+            Route.Day user year month day ->
+                "Bskylog: " ++ user
+
+            _ ->
+                "Bskylog"
     , body =
         [ Element.layout [] <|
             View.template
@@ -135,8 +141,8 @@ view model =
                     Route.Index ->
                         View.Index.view
 
-                    Route.UserDate user year month day ->
-                        Lazy.lazy5 View.UserDate.view user year month day model.feeds
+                    Route.Day user year month day ->
+                        Lazy.lazy5 View.Day.view user year month day model.feeds
 
                     _ ->
                         View.Index.view

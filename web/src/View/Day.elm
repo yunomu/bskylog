@@ -1,4 +1,4 @@
-module View.UserDate exposing (view)
+module View.Day exposing (view)
 
 import Element exposing (Attribute, Element, px)
 import Element.Border as Border

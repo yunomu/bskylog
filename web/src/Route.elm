@@ -8,7 +8,7 @@ import Url.Parser as P exposing ((</>), Parser)
 type Route
     = Index
     | User String
-    | UserDate String String String String
+    | Day String String String String
     | NotFound Url
 
 
@@ -21,7 +21,7 @@ path route =
         User user ->
             Just <| B.absolute [ user ] []
 
-        UserDate user year month day ->
+        Day user year month day ->
             Just <| B.absolute [ user, year, month, day ] []
 
         _ ->
@@ -33,7 +33,7 @@ parser =
     P.oneOf
         [ P.map Index P.top
         , P.map User P.string
-        , P.map UserDate <| P.string </> P.string </> P.string </> P.string
+        , P.map Day <| P.string </> P.string </> P.string </> P.string
         ]
 
 

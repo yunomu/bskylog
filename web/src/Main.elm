@@ -165,7 +165,17 @@ view model =
     { title =
         case model.route of
             Route.Day user year month day ->
-                "Bskylog: " ++ user
+                String.concat
+                    [ "Bskylog: "
+                    , user
+                    , " ("
+                    , year
+                    , "/"
+                    , month
+                    , "/"
+                    , day
+                    , ")"
+                    ]
 
             _ ->
                 "Bskylog"

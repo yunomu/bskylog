@@ -34,7 +34,7 @@ init =
 type Msg
     = UpdateDay String String String String
     | UpdateFeeds (List Feed)
-    | FetchFeeds String String String String
+    | Changed String String String String
 
 
 update : (Msg -> msg) -> Msg -> Model -> ( Model, Cmd msg )
@@ -55,7 +55,7 @@ update toMsg msg model =
                     , month = month
                     , day = day
                   }
-                , Lib.perform toMsg <| FetchFeeds user year month day
+                , Lib.perform toMsg <| Changed user year month day
                 )
 
             else

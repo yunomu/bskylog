@@ -137,7 +137,7 @@ update msg model =
                     View.Day.update DayMsg dayMsg model.dayModel
             in
             case dayMsg of
-                View.Day.FetchFeeds user year month day ->
+                View.Day.Changed user year month day ->
                     case Dict.get user model.userAliases of
                         Just did ->
                             ( { model | dayModel = dayModel }

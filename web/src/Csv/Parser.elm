@@ -25,13 +25,12 @@ lf =
 
 crlf : Parser ()
 crlf =
-    P.symbol "\r\n"
+    P.symbol "\u{000D}\n"
 
 
 newline : Parser ()
 newline =
     P.oneOf [ crlf, lf, cr ]
-
 
 
 nonEscaped : Parser String
@@ -100,8 +99,8 @@ file =
         |> P.map
             (\ls ->
                 case List.reverse ls of
-                    [""] :: rest ->
-                        List.reverse rest
+                    [ "" ] :: rest ->
+                        rest
 
                     _ ->
                         ls

@@ -11,27 +11,27 @@ import Lib
 import MonthIndex exposing (Day)
 
 
-type alias Model =
+type alias Model msg =
     { user : String
     , year : String
     , month : String
     , index : List Day
+    , changed : String -> String -> String -> msg
     }
 
 
-init : Model
-init =
-    Model "" "" "" []
+init : (String -> String -> String -> msg) -> Model msg
+init changed =
+    Model "" "" "" [] changed
 
 
 type Msg
     = UpdateMonth String String String
     | UpdateIndex (List Day)
-    | Changed String String String
 
 
-update : (Msg -> msg) -> Msg -> Model -> ( Model, Cmd msg )
-update toMsg msg model =
+update : Msg -> Model msg -> ( Model msg, Cmd msg )
+update msg model =
     case msg of
         UpdateMonth user year month ->
             if
@@ -46,7 +46,7 @@ update toMsg msg model =
                     , year = year
                     , month = month
                   }
-                , Lib.perform toMsg <| Changed user year month
+                , Lib.perform identity <| model.changed user year month
                 )
 
             else
@@ -56,9 +56,6 @@ update toMsg msg model =
             ( { model | index = days }
             , Cmd.none
             )
-
-        _ ->
-            ( model, Cmd.none )
 
 
 d02 : Int -> String
@@ -74,7 +71,7 @@ d02 i =
         s
 
 
-view : Model -> Element msg
+view : Model msg -> Element msg
 view model =
     Element.column
         [ Element.alignTop

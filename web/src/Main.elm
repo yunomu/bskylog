@@ -39,6 +39,7 @@ type Msg
     | FetchMonthIndex (Result Http.Error String)
     | DayMsg View.Day.Msg
     | MonthMsg View.Org.Month.Msg
+    | MonthChanged String String String
 
 
 type alias Model =
@@ -47,7 +48,7 @@ type alias Model =
     , windowSize : ( Int, Int )
     , userAliases : Dict String String
     , dayModel : View.Day.Model
-    , monthModel : View.Org.Month.Model
+    , monthModel : View.Org.Month.Model Msg
     }
 
 
@@ -58,7 +59,7 @@ init flags url key =
       , windowSize = ( flags.windowWidth, flags.windowHeight )
       , userAliases = Dict.empty
       , dayModel = View.Day.init
-      , monthModel = View.Org.Month.init
+      , monthModel = View.Org.Month.init MonthChanged
       }
     , Cmd.batch
         [ HttpLib.get (InitFetchUserCsv (Nav.pushUrl key (Url.toString url))) "/users"
@@ -164,30 +165,28 @@ update msg model =
         MonthMsg monthMsg ->
             let
                 ( mModel, mCmd ) =
-                    View.Org.Month.update MonthMsg monthMsg model.monthModel
+                    View.Org.Month.update monthMsg model.monthModel
             in
-            case monthMsg of
-                View.Org.Month.Changed user year month ->
-                    Lib.maybe ( model, Cmd.none )
-                        (\did ->
-                            ( { model | monthModel = mModel }
-                            , HttpLib.get FetchMonthIndex <| UrlBuilder.absolute [ did, year, month, "index" ] []
-                            )
-                        )
-                    <|
-                        Dict.get user model.userAliases
+            ( { model | monthModel = mModel }
+            , mCmd
+            )
 
-                _ ->
-                    ( { model | monthModel = mModel }
-                    , mCmd
+        MonthChanged user year month ->
+            Lib.maybe ( model, Cmd.none )
+                (\did ->
+                    ( model
+                    , HttpLib.get FetchMonthIndex <| UrlBuilder.absolute [ did, year, month, "index" ] []
                     )
+                )
+            <|
+                Dict.get user model.userAliases
 
         FetchMonthIndex res ->
             case HttpLib.andThen MonthIndex.build res of
                 Ok days ->
                     let
                         ( mModel, mCmd ) =
-                            View.Org.Month.update MonthMsg (View.Org.Month.UpdateIndex days) model.monthModel
+                            View.Org.Month.update (View.Org.Month.UpdateIndex days) model.monthModel
                     in
                     ( { model | monthModel = mModel }
                     , mCmd

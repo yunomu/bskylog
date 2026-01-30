@@ -25,12 +25,13 @@ lf =
 
 crlf : Parser ()
 crlf =
-    cr |> P.andThen (always lf)
+    P.symbol "\r\n"
 
 
 newline : Parser ()
 newline =
-    P.oneOf [ crlf, lf ]
+    P.oneOf [ crlf, lf, cr ]
+
 
 
 nonEscaped : Parser String
@@ -88,10 +89,20 @@ optional p =
 
 file : Parser (List (List String))
 file =
-    sepBy1 record newline
-        |> P.andThen
-            (\ls ->
-                optional newline |> P.andThen (always <| P.succeed ls)
-            )
+    P.succeed identity
+        |= sepBy1 record newline
+        |. P.oneOf
+            [ P.succeed () |. newline |. P.end
+            , P.end
+            ]
         -- drop header
         |> P.map (List.drop 1)
+        |> P.map
+            (\ls ->
+                case List.reverse ls of
+                    [""] :: rest ->
+                        List.reverse rest
+
+                    _ ->
+                        ls
+            )

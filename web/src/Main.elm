@@ -11,6 +11,7 @@ import Http
 import HttpLib
 import Json.Decode as JD
 import Lib
+import MonthIndex
 import Route exposing (Route)
 import Task
 import Url exposing (Url)
@@ -20,6 +21,7 @@ import View
 import View.Day
 import View.Index
 import View.Org.Header
+import View.Org.Month
 
 
 type alias Flags =
@@ -34,7 +36,9 @@ type Msg
     | OnResize Int Int
     | InitFetchUserCsv (Cmd Msg) (Result Http.Error String)
     | FetchLog (Result Http.Error String)
+    | FetchMonthIndex (Result Http.Error String)
     | DayMsg View.Day.Msg
+    | MonthMsg View.Org.Month.Msg
 
 
 type alias Model =
@@ -43,6 +47,7 @@ type alias Model =
     , windowSize : ( Int, Int )
     , userAliases : Dict String String
     , dayModel : View.Day.Model
+    , monthModel : View.Org.Month.Model
     }
 
 
@@ -53,6 +58,7 @@ init flags url key =
       , windowSize = ( flags.windowWidth, flags.windowHeight )
       , userAliases = Dict.empty
       , dayModel = View.Day.init
+      , monthModel = View.Org.Month.init
       }
     , Cmd.batch
         [ HttpLib.get (InitFetchUserCsv (Nav.pushUrl key (Url.toString url))) "/users"
@@ -81,7 +87,10 @@ update msg model =
                     case Dict.get user model.userAliases of
                         Just did ->
                             ( { model | route = route }
-                            , Lib.perform DayMsg <| View.Day.UpdateDay user year month day
+                            , Cmd.batch
+                                [ Lib.perform DayMsg <| View.Day.UpdateDay user year month day
+                                , Lib.perform MonthMsg <| View.Org.Month.UpdateMonth user year month
+                                ]
                             )
 
                         Nothing ->
@@ -138,21 +147,54 @@ update msg model =
             in
             case dayMsg of
                 View.Day.Changed user year month day ->
-                    case Dict.get user model.userAliases of
-                        Just did ->
+                    Lib.maybe ( model, Cmd.none )
+                        (\did ->
                             ( { model | dayModel = dayModel }
                             , HttpLib.get FetchLog <| UrlBuilder.absolute [ did, year, month, day ] []
                             )
-
-                        Nothing ->
-                            ( { model | dayModel = dayModel }
-                            , dayCmd
-                            )
+                        )
+                    <|
+                        Dict.get user model.userAliases
 
                 _ ->
                     ( { model | dayModel = dayModel }
                     , dayCmd
                     )
+
+        MonthMsg monthMsg ->
+            let
+                ( mModel, mCmd ) =
+                    View.Org.Month.update MonthMsg monthMsg model.monthModel
+            in
+            case monthMsg of
+                View.Org.Month.Changed user year month ->
+                    Lib.maybe ( model, Cmd.none )
+                        (\did ->
+                            ( { model | monthModel = mModel }
+                            , HttpLib.get FetchMonthIndex <| UrlBuilder.absolute [ did, year, month, "index" ] []
+                            )
+                        )
+                    <|
+                        Dict.get user model.userAliases
+
+                _ ->
+                    ( { model | monthModel = mModel }
+                    , mCmd
+                    )
+
+        FetchMonthIndex res ->
+            case HttpLib.andThen MonthIndex.build res of
+                Ok days ->
+                    let
+                        ( mModel, mCmd ) =
+                            View.Org.Month.update MonthMsg (View.Org.Month.UpdateIndex days) model.monthModel
+                    in
+                    ( { model | monthModel = mModel }
+                    , mCmd
+                    )
+
+                Err error ->
+                    ( model, Cmd.none )
 
 
 subscriptions : Model -> Sub Msg
@@ -188,7 +230,9 @@ view model =
                         View.Index.view
 
                     Route.Day user year month day ->
-                        Lazy.lazy View.Day.view model.dayModel
+                        Lazy.lazy2 View.Day.view
+                            (Lazy.lazy View.Org.Month.view model.monthModel)
+                            model.dayModel
 
                     _ ->
                         View.Index.view

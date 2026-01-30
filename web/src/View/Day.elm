@@ -440,21 +440,25 @@ viewFeed feed =
         viewPost False feed.post feed.reply
 
 
-view : Model -> Element msg
-view model =
-    Element.column
-        [ Element.spacing 10
-        , Element.paddingXY 30 0
-        ]
-        [ Element.row []
-            [ Element.text "Date:"
-            , Element.row []
-                [ Element.text model.year
-                , Element.text "/"
-                , Element.text model.month
-                , Element.text "/"
-                , Element.text model.day
-                ]
+view : Element msg -> Model -> Element msg
+view side model =
+    Element.row []
+        [ Element.column
+            [ Element.alignTop
+            , Element.spacing 10
+            , Element.paddingXY 30 0
             ]
-        , Element.column [] <| List.map viewFeed model.feeds
+            [ Element.row []
+                [ Element.text "Date:"
+                , Element.row []
+                    [ Element.text model.year
+                    , Element.text "/"
+                    , Element.text model.month
+                    , Element.text "/"
+                    , Element.text model.day
+                    ]
+                ]
+            , Element.column [] <| List.map viewFeed model.feeds
+            ]
+        , side
         ]

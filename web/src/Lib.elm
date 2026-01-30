@@ -42,6 +42,6 @@ any ls =
             False
 
 
-perform : (a -> msg) -> a -> Cmd msg
-perform f =
-    Task.perform f << Task.succeed
+perform : msg -> Cmd msg
+perform =
+    Task.perform identity << Task.succeed

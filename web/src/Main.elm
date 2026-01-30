@@ -90,8 +90,8 @@ update msg model =
                         Just did ->
                             ( { model | route = route }
                             , Cmd.batch
-                                [ Lib.perform DayMsg <| View.Day.UpdateDay user year month day
-                                , Lib.perform MonthMsg <| View.Org.Month.UpdateMonth user year month
+                                [ Lib.perform <| DayMsg <| View.Day.UpdateDay user year month day
+                                , Lib.perform <| MonthMsg <| View.Org.Month.UpdateMonth user year month
                                 ]
                             )
 

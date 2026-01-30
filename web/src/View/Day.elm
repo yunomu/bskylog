@@ -55,7 +55,7 @@ update msg model =
                     , month = month
                     , day = day
                   }
-                , Lib.perform identity <| model.changed user year month day
+                , Lib.perform <| model.changed user year month day
                 )
 
             else

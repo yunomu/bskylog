@@ -38,6 +38,7 @@ type Msg
     | FetchLog (Result Http.Error String)
     | FetchMonthIndex (Result Http.Error String)
     | DayMsg View.Day.Msg
+    | DayChanged String String String String
     | MonthMsg View.Org.Month.Msg
     | MonthChanged String String String
 
@@ -47,7 +48,7 @@ type alias Model =
     , route : Route
     , windowSize : ( Int, Int )
     , userAliases : Dict String String
-    , dayModel : View.Day.Model
+    , dayModel : View.Day.Model Msg
     , monthModel : View.Org.Month.Model Msg
     }
 
@@ -58,7 +59,7 @@ init flags url key =
       , route = Route.fromUrl url
       , windowSize = ( flags.windowWidth, flags.windowHeight )
       , userAliases = Dict.empty
-      , dayModel = View.Day.init
+      , dayModel = View.Day.init DayChanged
       , monthModel = View.Org.Month.init MonthChanged
       }
     , Cmd.batch
@@ -130,7 +131,7 @@ update msg model =
                 Ok feeds ->
                     let
                         ( dayModel, dayCmd ) =
-                            View.Day.update DayMsg (View.Day.UpdateFeeds feeds) model.dayModel
+                            View.Day.update (View.Day.UpdateFeeds feeds) model.dayModel
                     in
                     ( { model
                         | dayModel = dayModel
@@ -144,23 +145,21 @@ update msg model =
         DayMsg dayMsg ->
             let
                 ( dayModel, dayCmd ) =
-                    View.Day.update DayMsg dayMsg model.dayModel
+                    View.Day.update dayMsg model.dayModel
             in
-            case dayMsg of
-                View.Day.Changed user year month day ->
-                    Lib.maybe ( model, Cmd.none )
-                        (\did ->
-                            ( { model | dayModel = dayModel }
-                            , HttpLib.get FetchLog <| UrlBuilder.absolute [ did, year, month, day ] []
-                            )
-                        )
-                    <|
-                        Dict.get user model.userAliases
+            ( { model | dayModel = dayModel }
+            , dayCmd
+            )
 
-                _ ->
-                    ( { model | dayModel = dayModel }
-                    , dayCmd
+        DayChanged user year month day ->
+            Lib.maybe ( model, Cmd.none )
+                (\did ->
+                    ( model
+                    , HttpLib.get FetchLog <| UrlBuilder.absolute [ did, year, month, day ] []
                     )
+                )
+            <|
+                Dict.get user model.userAliases
 
         MonthMsg monthMsg ->
             let

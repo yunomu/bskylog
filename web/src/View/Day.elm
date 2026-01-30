@@ -17,28 +17,28 @@ import String.UTF8 as UTF8
 import Task
 
 
-type alias Model =
+type alias Model msg =
     { user : String
     , year : String
     , month : String
     , day : String
     , feeds : List Feed
+    , changed : String -> String -> String -> String -> msg
     }
 
 
-init : Model
-init =
-    Model "" "" "" "" []
+init : (String -> String -> String -> String -> msg) -> Model msg
+init changed =
+    Model "" "" "" "" [] changed
 
 
 type Msg
     = UpdateDay String String String String
     | UpdateFeeds (List Feed)
-    | Changed String String String String
 
 
-update : (Msg -> msg) -> Msg -> Model -> ( Model, Cmd msg )
-update toMsg msg model =
+update : Msg -> Model msg -> ( Model msg, Cmd msg )
+update msg model =
     case msg of
         UpdateDay user year month day ->
             if
@@ -55,7 +55,7 @@ update toMsg msg model =
                     , month = month
                     , day = day
                   }
-                , Lib.perform toMsg <| Changed user year month day
+                , Lib.perform identity <| model.changed user year month day
                 )
 
             else
@@ -63,9 +63,6 @@ update toMsg msg model =
 
         UpdateFeeds feeds ->
             ( { model | feeds = feeds }, Cmd.none )
-
-        _ ->
-            ( model, Cmd.none )
 
 
 type Text
@@ -440,7 +437,7 @@ viewFeed feed =
         viewPost False feed.post feed.reply
 
 
-view : Element msg -> Model -> Element msg
+view : Element msg -> Model msg -> Element msg
 view side model =
     Element.row []
         [ Element.column

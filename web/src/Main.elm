@@ -228,7 +228,7 @@ view model =
                         View.Index.view
 
                     Route.Day user year month day ->
-                        Lazy.lazy2 View.Day.view
+                        View.Day.view
                             (Lazy.lazy View.Org.Month.view model.monthModel)
                             model.dayModel
 

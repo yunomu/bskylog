@@ -9,6 +9,7 @@ module View.Day exposing
 import Element exposing (Attribute, Element, px)
 import Element.Border as Border
 import Element.Font as Font
+import Element.Lazy as Lazy
 import Feed exposing (Embed, External, Facet, Feed, Image, Post, Record, Reply, Video)
 import Html exposing (Html)
 import Html.Attributes as Attr
@@ -437,25 +438,30 @@ viewFeed feed =
         viewPost False feed.post feed.reply
 
 
+view_ : Model msg -> Element msg
+view_ model =
+    Element.column
+        [ Element.alignTop
+        , Element.spacing 10
+        , Element.paddingXY 30 0
+        ]
+        [ Element.row []
+            [ Element.text "Date:"
+            , Element.row []
+                [ Element.text model.year
+                , Element.text "/"
+                , Element.text model.month
+                , Element.text "/"
+                , Element.text model.day
+                ]
+            ]
+        , Element.column [] <| List.map viewFeed model.feeds
+        ]
+
+
 view : Element msg -> Model msg -> Element msg
 view side model =
     Element.row []
-        [ Element.column
-            [ Element.alignTop
-            , Element.spacing 10
-            , Element.paddingXY 30 0
-            ]
-            [ Element.row []
-                [ Element.text "Date:"
-                , Element.row []
-                    [ Element.text model.year
-                    , Element.text "/"
-                    , Element.text model.month
-                    , Element.text "/"
-                    , Element.text model.day
-                    ]
-                ]
-            , Element.column [] <| List.map viewFeed model.feeds
-            ]
+        [ Lazy.lazy view_ model
         , side
         ]

@@ -64,6 +64,8 @@ func (c *command) Execute(ctx context.Context, f *flag.FlagSet, args ...interfac
 		scanner.NewXRPCScanner(
 			client,
 			auth.Did,
+			"posts_with_replies",
+			false,
 			scanner.SetLogger(slog.With("module", "scanner")),
 		),
 		consumer.NewJSONRecord(

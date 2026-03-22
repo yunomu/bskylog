@@ -112,6 +112,8 @@ func (h *Handler) Handle(ctx context.Context, req *Request) {
 		scanner.NewXRPCScanner(
 			xrpcClient,
 			session.Did,
+			"posts_with_replies",
+			false,
 			scanner.SetLogger(h.logger.With("module", "scanner")),
 		),
 		consumer.NewDailyJSONRecordS3(

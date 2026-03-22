@@ -25,7 +25,7 @@ func New(
 }
 
 func (p *Processor) Proc(ctx context.Context) error {
-	if err := p.scanner.Scan(ctx, "posts_with_replies", false, func(feed []*bsky.FeedDefs_FeedViewPost) error {
+	if err := p.scanner.Scan(ctx, func(feed []*bsky.FeedDefs_FeedViewPost) error {
 		for _, post := range feed {
 			if err := p.consumer.Consume(ctx, post); err != nil {
 				return err

@@ -9,13 +9,15 @@ import (
 )
 
 type Scanner interface {
-	Scan(ctx context.Context, filter string, includePins bool, f func([]*bsky.FeedDefs_FeedViewPost) error) error
+	Scan(ctx context.Context, f func([]*bsky.FeedDefs_FeedViewPost) error) error
 }
 
 type XRPCScanner struct {
-	client lexutil.LexClient
-	actor  string
-	limits int64
+	client      lexutil.LexClient
+	actor       string
+	filter      string
+	includePins bool
+	limits      int64
 
 	logger *slog.Logger
 }
@@ -34,11 +36,13 @@ func SetLogger(l *slog.Logger) XRPCScannerOption {
 	}
 }
 
-func NewXRPCScanner(client lexutil.LexClient, actor string, opts ...XRPCScannerOption) *XRPCScanner {
+func NewXRPCScanner(client lexutil.LexClient, actor string, filter string, includePins bool, opts ...XRPCScannerOption) *XRPCScanner {
 	ret := &XRPCScanner{
-		client: client,
-		actor:  actor,
-		limits: 100,
+		client:      client,
+		actor:       actor,
+		filter:      filter,
+		includePins: includePins,
+		limits:      100,
 	}
 	for _, f := range opts {
 		f(ret)
@@ -46,7 +50,7 @@ func NewXRPCScanner(client lexutil.LexClient, actor string, opts ...XRPCScannerO
 	return ret
 }
 
-func (s *XRPCScanner) Scan(ctx context.Context, filter string, includePins bool, f func([]*bsky.FeedDefs_FeedViewPost) error) error {
+func (s *XRPCScanner) Scan(ctx context.Context, f func([]*bsky.FeedDefs_FeedViewPost) error) error {
 	var cursor string
 	for {
 		select {
@@ -56,13 +60,13 @@ func (s *XRPCScanner) Scan(ctx context.Context, filter string, includePins bool,
 			// do nothing
 		}
 
-		feed, err := bsky.FeedGetAuthorFeed(ctx, s.client, s.actor, cursor, filter, includePins, s.limits)
+		feed, err := bsky.FeedGetAuthorFeed(ctx, s.client, s.actor, cursor, s.filter, s.includePins, s.limits)
 		if err != nil {
 			s.logger.Error("FeedGetAuthorFeed",
 				"actor", s.actor,
 				"cursor", cursor,
-				"filter", filter,
-				"includePins", includePins,
+				"filter", s.filter,
+				"includePins", s.includePins,
 				"limits", s.limits,
 			)
 			return err

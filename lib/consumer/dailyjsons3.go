@@ -303,9 +303,10 @@ func (c *DailyJSONRecordS3) Close(ctx context.Context) error {
 	}
 
 	if _, err := c.s3Client.PutObject(ctx, &s3.PutObjectInput{
-		Bucket: aws.String(c.bucket),
-		Key:    aws.String(c.key),
-		Body:   c.buf,
+		Bucket:      aws.String(c.bucket),
+		Key:         aws.String(c.key),
+		Body:        c.buf,
+		ContentType: aws.String("application/json"),
 	}); err != nil {
 		c.logger.Error("s3.PutObject",
 			"bucket", c.bucket,
@@ -338,9 +339,10 @@ func (c *DailyJSONRecordS3) Close(ctx context.Context) error {
 	w.Flush()
 
 	if _, err := c.s3Client.PutObject(ctx, &s3.PutObjectInput{
-		Bucket: aws.String(c.bucket),
-		Key:    aws.String(c.indexKey),
-		Body:   &buf,
+		Bucket:      aws.String(c.bucket),
+		Key:         aws.String(c.indexKey),
+		Body:        &buf,
+		ContentType: aws.String("text/csv"),
 	}); err != nil {
 		c.logger.Error("s3.PutObject(index)",
 			"bucket", c.bucket,

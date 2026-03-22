@@ -15,6 +15,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.95.1
 	github.com/aws/smithy-go v1.24.0
 	github.com/bluesky-social/indigo v0.0.0-20251223190123-598fbf0e146e
+	github.com/google/go-cmp v0.6.0
 	github.com/google/subcommands v1.2.0
 )
 

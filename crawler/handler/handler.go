@@ -129,8 +129,11 @@ func (h *Handler) Handle(ctx context.Context, req *Request) {
 				},
 			),
 			consumer.SetDailyJSONRecordS3FirstValueFunc(
-				func(v *consumer.TerminalValue) {
-					first = v
+				func(ts int64, cid string) {
+					first = &consumer.TerminalValue{
+						TimeStamp: ts,
+						Cid:       cid,
+					}
 				},
 			),
 			consumer.SetDailyJSONRecordS3KeyUpdateFunc(

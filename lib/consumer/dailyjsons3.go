@@ -49,7 +49,7 @@ type DailyJSONRecordS3 struct {
 	index    map[int]int
 	indexKey string
 
-	first     func(*TerminalValue)
+	first     func(int64, string)
 	saveFirst func(int64, string)
 	keyUpdate func(string)
 
@@ -76,7 +76,7 @@ func SetDailyJSONRecordS3TerminalValue(v *TerminalValue) DailyJSONRecordS3Option
 	}
 }
 
-func SetDailyJSONRecordS3FirstValueFunc(f func(v *TerminalValue)) DailyJSONRecordS3Option {
+func SetDailyJSONRecordS3FirstValueFunc(f func(ts int64, cid string)) DailyJSONRecordS3Option {
 	return func(c *DailyJSONRecordS3) {
 		c.first = f
 	}
@@ -100,7 +100,7 @@ func NewDailyJSONRecordS3(
 		bucket:    bucket,
 		baseDir:   baseDir,
 		location:  location,
-		first:     func(*TerminalValue) {},
+		first:     func(int64, string) {},
 		keyUpdate: func(string) {},
 		logger:    slog.Default(),
 	}
@@ -108,10 +108,7 @@ func NewDailyJSONRecordS3(
 		f(ret)
 	}
 	ret.saveFirst = func(ts int64, cid string) {
-		ret.first(&TerminalValue{
-			TimeStamp: ts,
-			Cid:       cid,
-		})
+		ret.first(ts, cid)
 		ret.saveFirst = func(int64, string) {}
 	}
 	return ret

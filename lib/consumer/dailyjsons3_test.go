@@ -64,7 +64,7 @@ func TestDailyJSONRecordS3FirstCallOnce(t *testing.T) {
 		"test-bucket",
 		"base",
 		time.UTC,
-		SetDailyJSONRecordS3FirstValueFunc(func(v *TerminalValue) {
+		SetDailyJSONRecordS3FirstValueFunc(func(ts int64, cid string) {
 			firstCallCount.Add(1)
 		}),
 	)

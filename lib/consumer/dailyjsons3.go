@@ -52,7 +52,7 @@ type DailyJSONRecordS3 struct {
 	first     func(int64, string)
 	saveFirst func(int64, string)
 	keyUpdate func(string)
-	onSuccess func(*bsky.FeedDefs_FeedViewPost)
+	onSuccess func(*bsky.FeedDefs_FeedViewPost, string, int)
 
 	logger *slog.Logger
 }
@@ -89,7 +89,7 @@ func SetDailyJSONRecordS3KeyUpdateFunc(f func(string)) DailyJSONRecordS3Option {
 	}
 }
 
-func SetDailyJSONRecordS3OnSuccessFunc(f func(*bsky.FeedDefs_FeedViewPost)) DailyJSONRecordS3Option {
+func SetDailyJSONRecordS3OnSuccessFunc(f func(*bsky.FeedDefs_FeedViewPost, string, int)) DailyJSONRecordS3Option {
 	return func(c *DailyJSONRecordS3) {
 		c.onSuccess = f
 	}
@@ -109,7 +109,7 @@ func NewDailyJSONRecordS3(
 		location:  location,
 		first:     func(int64, string) {},
 		keyUpdate: func(string) {},
-		onSuccess: func(*bsky.FeedDefs_FeedViewPost) {},
+		onSuccess: func(*bsky.FeedDefs_FeedViewPost, string, int) {},
 		logger:    slog.Default(),
 	}
 	for _, f := range opts {
@@ -247,10 +247,11 @@ func (c *DailyJSONRecordS3) Consume(ctx context.Context, post *bsky.FeedDefs_Fee
 		return err
 	}
 	c.saveFirst(t.Unix(), post.Post.Cid)
+	idx := c.index[t.Day()]
 	c.index[t.Day()]++
 
 	c.logger.Info("Consume", "time", record.CreatedAt, "cid", post.Post.Cid)
-	c.onSuccess(post)
+	c.onSuccess(post, c.key, idx)
 	return nil
 }
 

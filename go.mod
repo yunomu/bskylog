@@ -17,6 +17,7 @@ require (
 	github.com/bluesky-social/indigo v0.0.0-20251223190123-598fbf0e146e
 	github.com/google/subcommands v1.2.0
 	github.com/stretchr/testify v1.10.0
+	golang.org/x/sync v0.7.0
 )
 
 require (

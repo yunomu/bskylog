@@ -18,7 +18,7 @@ func Test_toRecord(t *testing.T) {
 		t.Fatalf("unmarshal error: %v", err)
 	}
 
-	rec := toRecord("key", 1, &fvp)
+	rec := ToRecord("key", 1, &fvp)
 
 	ts, err := time.Parse(time.RFC3339, "2026-03-08T11:50:19.803Z")
 	if err != nil {
@@ -54,7 +54,7 @@ func Test_toRecord_embed(t *testing.T) {
 		t.Fatalf("unmarshal error: %v", err)
 	}
 
-	rec := toRecord("key", 1, &fvp)
+	rec := ToRecord("key", 1, &fvp)
 
 	ts, err := time.Parse(time.RFC3339, "2026-03-08T12:27:05.144Z")
 	if err != nil {
@@ -90,7 +90,7 @@ func Test_toRecord_link(t *testing.T) {
 		t.Fatalf("unmarshal error: %v", err)
 	}
 
-	rec := toRecord("key", 1, &fvp)
+	rec := ToRecord("key", 1, &fvp)
 
 	ts, err := time.Parse(time.RFC3339, "2026-03-08T12:47:26.689Z")
 	if err != nil {
@@ -126,7 +126,7 @@ func Test_toRecord_reply(t *testing.T) {
 		t.Fatalf("unmarshal error: %v", err)
 	}
 
-	rec := toRecord("key", 1, &fvp)
+	rec := ToRecord("key", 1, &fvp)
 
 	ts, err := time.Parse(time.RFC3339, "2026-03-08T06:09:21.988Z")
 	if err != nil {

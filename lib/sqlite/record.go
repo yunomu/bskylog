@@ -34,7 +34,7 @@ type Record struct {
 	position int32
 }
 
-func toRecord(key string, position int, post *bsky.FeedDefs_FeedViewPost) *Record {
+func ToRecord(key string, position int, post *bsky.FeedDefs_FeedViewPost) *Record {
 	rec := &Record{
 		Key:      key,
 		position: int32(position),

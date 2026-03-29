@@ -12,6 +12,7 @@ import (
 	"github.com/yunomu/bskylog/cmd/bsky"
 	"github.com/yunomu/bskylog/cmd/config"
 	"github.com/yunomu/bskylog/cmd/crawlerdb"
+	"github.com/yunomu/bskylog/cmd/sqlite"
 	"github.com/yunomu/bskylog/cmd/userdb"
 )
 
@@ -24,6 +25,7 @@ func init() {
 	subcommands.Register(userdb.NewCommand(), "")
 	subcommands.Register(bsky.NewCommand(), "")
 	subcommands.Register(config.NewCommand(), "")
+	subcommands.Register(sqlite.NewCommand(), "")
 
 	subcommands.Register(subcommands.CommandsCommand(), "other")
 	subcommands.Register(subcommands.FlagsCommand(), "other")

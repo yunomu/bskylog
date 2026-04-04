@@ -12,6 +12,7 @@ import (
 
 	"github.com/yunomu/bskylog/cmd/sqlite/batchput"
 	"github.com/yunomu/bskylog/cmd/sqlite/put"
+	"github.com/yunomu/bskylog/cmd/sqlite/search" // searchパッケージをインポート
 )
 
 type command struct {
@@ -38,6 +39,7 @@ func (c *command) SetFlags(f *flag.FlagSet) {
 
 	commander.Register(put.NewCommand(), "")
 	commander.Register(batchput.NewCommand(), "")
+	commander.Register(search.NewCommand(), "") // searchサブコマンドを登録
 	c.commander = commander
 }
 

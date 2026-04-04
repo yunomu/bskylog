@@ -59,3 +59,26 @@ func (s *Gorm) Put(ctx context.Context, key string, position int, post *bsky.Fee
 	}
 	return nil
 }
+
+type SearchResult struct {
+	Key      string
+	Position int
+}
+
+func (s *Gorm) Search(ctx context.Context, query string) ([]*SearchResult, error) {
+	var records []Record
+	if err := s.db.WithContext(ctx).Where("text LIKE ?", "%"+query+"%").Find(&records).Error; err != nil {
+		s.logger.Error("failed to search records", "query", query, "err", err)
+		return nil, err
+	}
+
+	results := make([]*SearchResult, len(records))
+	for i, rec := range records {
+		results[i] = &SearchResult{
+			Key:      rec.Key,
+			Position: int(rec.Position),
+		}
+	}
+
+	return results, nil
+}

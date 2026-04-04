@@ -87,6 +87,40 @@ Resources:
             OriginAccessControlId: !GetAtt CloudFrontOriginAccessControl.Id
             S3OriginConfig: {}
 
+  SearchIndexBucket:
+    Type: AWS::S3::Bucket
+
+  IndexFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      PackageType: Zip
+      CodeUri: index/
+      Timeout: 10
+      Environment:
+        Variables:
+          REGION: !Ref AWS::Region
+          SEARCH_INDEX_BUCKET: !Ref SearchIndexBucket
+
+  IndexFunctionPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: IndexFunctionPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+              - s3:ListBucket
+            Resource:
+              - !Sub "arn:aws:s3:::${SearchIndexBucket}/*"
+              - !Sub "arn:aws:s3:::${SearchIndexBucket}"
+      Roles:
+        - !Ref IndexFunctionRole
+
   UserTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -133,6 +167,7 @@ Resources:
           DISTRIBUTION: !Ref Distribution
           CRAWLER_TABLE: !Ref CrawlerTable
           BSKY_HOST: !Ref BskyHost
+          INDEX_FUNCTION: !Ref IndexFunction
 
   CrawlerFunctionPolicy:
     Type: AWS::IAM::Policy
@@ -166,6 +201,11 @@ Resources:
               - s3:ListBucket
             Resource:
               - !Sub "arn:aws:s3:::${PublishBucket}"
+          - Effect: Allow
+            Action:
+              - lambda:InvokeFunction
+            Resource:
+              - !GetAtt IndexFunction.Arn
       Roles:
         - !Ref CrawlerFunctionRole
 

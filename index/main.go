@@ -31,7 +31,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	h := handler.NewHandler(s3Client, bucket, logger)
+	h := handler.NewHandler(s3Client, bucket, "/tmp", logger)
 
 	lambda.StartWithContext(ctx, h.Handle)
 }

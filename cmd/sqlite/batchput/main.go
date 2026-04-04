@@ -49,14 +49,7 @@ func (c *command) Execute(ctx context.Context, f *flag.FlagSet, args ...interfac
 		return subcommands.ExitFailure
 	}
 
-	// Use transaction for batch insert
-	tx := db.WithContext(ctx).Begin()
-	if tx.Error != nil {
-		slog.Error("failed to begin transaction", "err", tx.Error)
-		return subcommands.ExitFailure
-	}
-
-	recordStore := index.NewGorm(tx) // Pass the transaction to the record store
+	recordStore := index.NewGorm(db)
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
@@ -64,7 +57,6 @@ func (c *command) Execute(ctx context.Context, f *flag.FlagSet, args ...interfac
 		parts := strings.SplitN(line, "\t", 3)
 		if len(parts) != 3 {
 			slog.Error("invalid TSV format", "line", line)
-			tx.Rollback()
 			return subcommands.ExitFailure
 		}
 
@@ -72,32 +64,23 @@ func (c *command) Execute(ctx context.Context, f *flag.FlagSet, args ...interfac
 		position, err := strconv.Atoi(parts[1])
 		if err != nil {
 			slog.Error("invalid position format", "position", parts[1], "err", err)
-			tx.Rollback()
 			return subcommands.ExitFailure
 		}
 
 		var post bsky.FeedDefs_FeedViewPost
 		if err := json.Unmarshal([]byte(parts[2]), &post); err != nil {
 			slog.Error("failed to unmarshal post JSON", "json", parts[2], "err", err)
-			tx.Rollback()
 			return subcommands.ExitFailure
 		}
 
 		if err := recordStore.Put(ctx, key, position, &post); err != nil {
 			slog.Error("failed to put record", "key", key, "position", position, "err", err)
-			tx.Rollback()
 			return subcommands.ExitFailure
 		}
 	}
 
 	if err := scanner.Err(); err != nil && err != io.EOF {
 		slog.Error("error reading stdin", "err", err)
-		tx.Rollback()
-		return subcommands.ExitFailure
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		slog.Error("failed to commit transaction", "err", err)
 		return subcommands.ExitFailure
 	}
 

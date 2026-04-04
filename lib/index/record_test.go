@@ -1,4 +1,4 @@
-package sqlite
+package index
 
 import (
 	"encoding/json"
@@ -34,15 +34,15 @@ func Test_toRecord(t *testing.T) {
 		Name:      "灘",
 		Embed:     "none",
 		Key:       "key",
-		position:  1,
+		Position:  1,
 	}
 
 	if diff := cmp.Diff(expected, rec, cmpopts.IgnoreUnexported(Record{})); diff != "" {
 		t.Errorf("toRecord mismatch (-want +got):\n%s", diff)
 	}
 
-	if rec.position != expected.position {
-		t.Errorf("position mismatch: want %d, got %d", expected.position, rec.position)
+	if rec.Position != expected.Position {
+		t.Errorf("Position mismatch: want %d, got %d", expected.Position, rec.Position)
 	}
 }
 
@@ -70,15 +70,15 @@ func Test_toRecord_embed(t *testing.T) {
 		Name:      "灘",
 		Embed:     "image",
 		Key:       "key",
-		position:  1,
+		Position:  1,
 	}
 
 	if diff := cmp.Diff(expected, rec, cmpopts.IgnoreUnexported(Record{})); diff != "" {
 		t.Errorf("toRecord mismatch (-want +got):\n%s", diff)
 	}
 
-	if rec.position != expected.position {
-		t.Errorf("position mismatch: want %d, got %d", expected.position, rec.position)
+	if rec.Position != expected.Position {
+		t.Errorf("Position mismatch: want %d, got %d", expected.Position, rec.Position)
 	}
 }
 
@@ -106,15 +106,15 @@ func Test_toRecord_link(t *testing.T) {
 		Name:      "灘",
 		Embed:     "external",
 		Key:       "key",
-		position:  1,
+		Position:  1,
 	}
 
 	if diff := cmp.Diff(expected, rec, cmpopts.IgnoreUnexported(Record{})); diff != "" {
 		t.Errorf("toRecord mismatch (-want +got):\n%s", diff)
 	}
 
-	if rec.position != expected.position {
-		t.Errorf("position mismatch: want %d, got %d", expected.position, rec.position)
+	if rec.Position != expected.Position {
+		t.Errorf("Position mismatch: want %d, got %d", expected.Position, rec.Position)
 	}
 }
 
@@ -148,14 +148,14 @@ func Test_toRecord_reply(t *testing.T) {
 		ReplyParentName:   &rName,
 		Embed:             "none",
 		Key:               "key",
-		position:          1,
+		Position:          1,
 	}
 
 	if diff := cmp.Diff(expected, rec, cmpopts.IgnoreUnexported(Record{})); diff != "" {
 		t.Errorf("toRecord mismatch (-want +got):\n%s", diff)
 	}
 
-	if rec.position != expected.position {
-		t.Errorf("position mismatch: want %d, got %d", expected.position, rec.position)
+	if rec.Position != expected.Position {
+		t.Errorf("Position mismatch: want %d, got %d", expected.Position, rec.Position)
 	}
 }

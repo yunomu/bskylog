@@ -12,7 +12,8 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/bluesky-social/indigo/api/bsky"
-	"github.com/yunomu/bskylog/lib/sqlite"
+
+	"github.com/yunomu/bskylog/lib/index"
 )
 
 type command struct {
@@ -78,9 +79,9 @@ func (c *command) Execute(ctx context.Context, f *flag.FlagSet, args ...interfac
 		return subcommands.ExitFailure
 	}
 
-	rec := sqlite.ToRecord(*c.key, *c.position, &fvp)
+	rec := index.ToRecord(*c.key, *c.position, &fvp)
 	if rec == nil {
-		slog.Error("failed to convert to sqlite.Record")
+		slog.Error("failed to convert to index.Record")
 		return subcommands.ExitFailure
 	}
 

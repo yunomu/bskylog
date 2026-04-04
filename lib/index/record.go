@@ -1,4 +1,4 @@
-package sqlite
+package index
 
 import (
 	"time"
@@ -31,13 +31,13 @@ type Record struct {
 	EmbedPostName   *string
 
 	Key      string
-	position int32
+	Position int32
 }
 
 func ToRecord(key string, position int, post *bsky.FeedDefs_FeedViewPost) *Record {
 	rec := &Record{
 		Key:      key,
-		position: int32(position),
+		Position: int32(position),
 		Embed:    "none",
 	}
 

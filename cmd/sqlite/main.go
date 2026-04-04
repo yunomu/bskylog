@@ -10,6 +10,7 @@ import (
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 
+	"github.com/yunomu/bskylog/cmd/sqlite/batchput"
 	"github.com/yunomu/bskylog/cmd/sqlite/put"
 )
 
@@ -36,6 +37,7 @@ func (c *command) SetFlags(f *flag.FlagSet) {
 	commander := subcommands.NewCommander(f, "bsky")
 
 	commander.Register(put.NewCommand(), "")
+	commander.Register(batchput.NewCommand(), "")
 	c.commander = commander
 }
 

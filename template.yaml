@@ -264,3 +264,5 @@ Outputs:
     Value: !Ref CrawlerFunction
   TriggerFunction:
     Value: !Ref TriggerFunction
+  SearchIndexBucket:
+    Value: !Ref SearchIndexBucket

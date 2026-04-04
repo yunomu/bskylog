@@ -2,21 +2,19 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
+	"os"
 
 	"github.com/aws/aws-lambda-go/lambda"
+
+	"github.com/yunomu/bskylog/index/handler"
 )
 
-type MyEvent struct {
-	Name string `json:"name"`
-}
-
-func HandleRequest(ctx context.Context, name MyEvent) (string, error) {
-	slog.Info("Received event", "name", name.Name)
-	return fmt.Sprintf("Hello %s!", name.Name), nil
-}
-
 func main() {
-	lambda.Start(HandleRequest)
+	ctx := context.Background()
+
+	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
+	h := handler.NewHandler(logger)
+
+	lambda.StartWithContext(ctx, h.Handle)
 }

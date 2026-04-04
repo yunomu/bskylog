@@ -5,15 +5,26 @@ import (
 	"log/slog"
 
 	"github.com/bluesky-social/indigo/api/bsky"
+
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
-type Handler struct {
-	logger *slog.Logger
+type S3Client interface {
+	PutObject(ctx context.Context, params *s3.PutObjectInput, optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error)
+	GetObject(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error)
 }
 
-func NewHandler(logger *slog.Logger) *Handler {
+type Handler struct {
+	s3Client S3Client
+	bucket   string
+	logger   *slog.Logger
+}
+
+func NewHandler(s3Client S3Client, bucket string, logger *slog.Logger) *Handler {
 	return &Handler{
-		logger: logger,
+		s3Client: s3Client,
+		bucket:   bucket,
+		logger:   logger,
 	}
 }
 

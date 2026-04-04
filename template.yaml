@@ -100,7 +100,6 @@ Resources:
       Timeout: 10
       Environment:
         Variables:
-          REGION: !Ref AWS::Region
           SEARCH_INDEX_BUCKET: !Ref SearchIndexBucket
 
   IndexFunctionPolicy:

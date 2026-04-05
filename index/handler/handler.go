@@ -41,9 +41,15 @@ func NewHandler(s3Client S3Client, bucket string, tmpDir string, logger *slog.Lo
 	}
 }
 
+type Item struct {
+	Key      string                      `json:"key"`
+	Position int                         `json:"pos"`
+	Post     *bsky.FeedDefs_FeedViewPost `json:"post"`
+}
+
 type Request struct {
-	DID   string                        `json:"did"`
-	Posts []*bsky.FeedDefs_FeedViewPost `json:"posts"`
+	DID   string  `json:"did"`
+	Items []*Item `json:"items"`
 }
 
 func (h *Handler) storeDB(ctx context.Context, filePath string, did string) error {
@@ -81,11 +87,10 @@ func (h *Handler) storeDB(ctx context.Context, filePath string, did string) erro
 	return nil
 }
 
-func (h *Handler) putPosts(
+func (h *Handler) putItems(
 	ctx context.Context,
 	filePath string,
-	did string,
-	posts []*bsky.FeedDefs_FeedViewPost,
+	items []*Item,
 ) error {
 	db, err := gorm.Open(sqlite.Open(filePath), &gorm.Config{})
 	if err != nil {
@@ -101,20 +106,20 @@ func (h *Handler) putPosts(
 
 	gormDB := index.NewGorm(db, index.GormOptionLogger(h.logger))
 
-	for i, post := range posts {
-		if err := gormDB.Put(ctx, did, i, post); err != nil {
-			h.logger.Error("gormDB.Put", "err", err, "did", did, "position", i)
+	for _, item := range items {
+		if err := gormDB.Put(ctx, item.Key, item.Position, item.Post); err != nil {
+			h.logger.Error("gormDB.Put", "err", err, "item", item)
 			return err
 		}
 	}
 
-	h.logger.Info("Successfully put posts into SQLite DB", "did", did, "num_posts", len(posts))
+	h.logger.Info("Successfully put posts into SQLite DB", "filepath", filePath, "num_items", len(items))
 
 	return nil
 }
 
 func (h *Handler) Handle(ctx context.Context, req *Request) error {
-	h.logger.Info("IndexFunction received request", "did", req.DID, "num_posts", len(req.Posts))
+	h.logger.Info("IndexFunction received request", "did", req.DID, "num_items", len(req.Items))
 
 	filePath := filepath.Join(h.tmpDir, req.DID)
 	defer os.Remove(filePath)
@@ -123,7 +128,7 @@ func (h *Handler) Handle(ctx context.Context, req *Request) error {
 		return err
 	}
 
-	if err := h.putPosts(ctx, filePath, req.DID, req.Posts); err != nil {
+	if err := h.putItems(ctx, filePath, req.Items); err != nil {
 		return err
 	}
 

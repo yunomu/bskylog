@@ -97,7 +97,7 @@ Resources:
     Properties:
       PackageType: Zip
       CodeUri: index/
-      Timeout: 10
+      Timeout: 30
       Environment:
         Variables:
           SEARCH_INDEX_BUCKET: !Ref SearchIndexBucket

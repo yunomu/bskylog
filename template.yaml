@@ -86,6 +86,21 @@ Resources:
             DomainName: !GetAtt PublishBucket.RegionalDomainName
             OriginAccessControlId: !GetAtt CloudFrontOriginAccessControl.Id
             S3OriginConfig: {}
+          - Id: !Sub "SearchApi-${AWS::StackName}"
+            DomainName: !Select [ 1, !Split [ '://', !GetAtt SearchHttpApi.ApiEndpoint ] ]
+            CustomOriginConfig:
+              OriginProtocolPolicy: HttpsOnly
+              OriginSSLProtocols:
+                - TLSv1.2
+        CacheBehaviors:
+          - PathPattern: /search/*
+            TargetOriginId: !Sub "SearchApi-${AWS::StackName}"
+            ViewerProtocolPolicy: https-only
+            AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            CachePolicyId: !Ref CloudFrontManagedCachePolicy
 
   SearchIndexBucket:
     Type: AWS::S3::Bucket
@@ -208,6 +223,58 @@ Resources:
               - !GetAtt IndexFunction.Arn
       Roles:
         - !Ref CrawlerFunctionRole
+
+  SearchHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowOrigins:
+          - !Sub "https://${SiteDomainName}"
+        AllowMethods:
+          - GET
+        AllowHeaders:
+          - Content-Type
+        MaxAge: 300
+
+  SearchFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: go1.x
+    Properties:
+      PackageType: Zip
+      CodeUri: search/
+      Timeout: 30
+      Environment:
+        Variables:
+          SEARCH_INDEX_BUCKET: !Ref SearchIndexBucket
+          PUBLISH_BUCKET: !Ref PublishBucket
+          TMP_DIR: /tmp
+      Events:
+        SearchApi:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref SearchHttpApi
+            Path: /search/{did}
+            Method: GET
+
+  SearchFunctionPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: SearchFunctionPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:ListBucket
+            Resource:
+              - !Sub "arn:aws:s3:::${SearchIndexBucket}/*"
+              - !Sub "arn:aws:s3:::${SearchIndexBucket}"
+              - !Sub "arn:aws:s3:::${PublishBucket}/did:*"
+              - !Sub "arn:aws:s3:::${PublishBucket}"
+      Roles:
+        - !Ref SearchFunctionRole
 
   TriggerFunction:
     Type: AWS::Serverless::Function

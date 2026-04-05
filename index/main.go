@@ -23,15 +23,19 @@ func main() {
 		os.Exit(1)
 	}
 
-	s3Client := s3.NewFromConfig(cfg)
-
 	bucket := os.Getenv("SEARCH_INDEX_BUCKET")
-	if bucket == "" {
-		logger.Error("SEARCH_INDEX_BUCKET is not set")
-		os.Exit(1)
-	}
+	tmpDir := os.Getenv("TMP_DIR")
+	logger.Info("Start",
+		"searchIndexBucket", bucket,
+		"tmpDir", tmpDir,
+	)
 
-	h := handler.NewHandler(s3Client, bucket, "/tmp", logger)
+	h := handler.NewHandler(
+		s3.NewFromConfig(cfg),
+		bucket,
+		tmpDir,
+		logger.With("module", "handler"),
+	)
 
 	lambda.StartWithContext(ctx, h.Handle)
 }

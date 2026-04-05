@@ -101,6 +101,7 @@ Resources:
       Environment:
         Variables:
           SEARCH_INDEX_BUCKET: !Ref SearchIndexBucket
+          TMP_DIR: /tmp
 
   IndexFunctionPolicy:
     Type: AWS::IAM::Policy

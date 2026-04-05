@@ -1,27 +1,38 @@
 package handler
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strconv"
 	"time"
 
 	"github.com/bluesky-social/indigo/api/atproto"
+	"github.com/bluesky-social/indigo/api/bsky"
 	"github.com/bluesky-social/indigo/xrpc"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudfront"
 	"github.com/aws/aws-sdk-go-v2/service/cloudfront/types"
+	"github.com/aws/aws-sdk-go-v2/service/lambda"
+	lambdatypes "github.com/aws/aws-sdk-go-v2/service/lambda/types"
 
 	"github.com/yunomu/bskylog/lib/consumer"
 	"github.com/yunomu/bskylog/lib/crawlerdb"
 	"github.com/yunomu/bskylog/lib/processor"
 	"github.com/yunomu/bskylog/lib/scanner"
+
+	indexhandler "github.com/yunomu/bskylog/index/handler"
 )
 
 type CloudFrontClient interface {
 	CreateInvalidation(ctx context.Context, params *cloudfront.CreateInvalidationInput, optFns ...func(*cloudfront.Options)) (*cloudfront.CreateInvalidationOutput, error)
+}
+
+type LambdaClient interface {
+	Invoke(ctx context.Context, params *lambda.InvokeInput, optFns ...func(*lambda.Options)) (*lambda.InvokeOutput, error)
 }
 
 type Handler struct {
@@ -31,6 +42,8 @@ type Handler struct {
 	bucket           string
 	cloudfrontClient CloudFrontClient
 	distribution     string
+	lambdaClient     LambdaClient
+	indexFunction    string
 
 	logger *slog.Logger
 }
@@ -42,6 +55,8 @@ func NewHandler(
 	bucket string,
 	cloudfrontClient CloudFrontClient,
 	distribution string,
+	lambdaClient LambdaClient,
+	indexFunction string,
 	logger *slog.Logger,
 ) *Handler {
 	return &Handler{
@@ -51,6 +66,8 @@ func NewHandler(
 		bucket:           bucket,
 		cloudfrontClient: cloudfrontClient,
 		distribution:     distribution,
+		lambdaClient:     lambdaClient,
+		indexFunction:    indexFunction,
 		logger:           logger,
 	}
 }
@@ -59,6 +76,31 @@ type Request struct {
 	Handle   string `json:"handle"`
 	Password string `json:"password"`
 	TimeZone int    `json:"timezone"`
+}
+
+func (h *Handler) invokeIndexFunction(ctx context.Context, req *indexhandler.Request) error {
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	if err := enc.Encode(req); err != nil {
+		h.logger.Error("InvokeIndexFunction request encode error",
+			"request", req,
+		)
+		return err
+	}
+
+	if _, err := h.lambdaClient.Invoke(ctx, &lambda.InvokeInput{
+		FunctionName:   aws.String(h.indexFunction),
+		InvocationType: lambdatypes.InvocationTypeEvent,
+		Payload:        buf.Bytes(),
+	}); err != nil {
+		h.logger.Error("Invoke index function error",
+			"request", req,
+			"function", h.indexFunction,
+		)
+		return err
+	}
+
+	return nil
 }
 
 func (h *Handler) Handle(ctx context.Context, req *Request) {
@@ -108,6 +150,7 @@ func (h *Handler) Handle(ctx context.Context, req *Request) {
 
 	var first *consumer.TerminalValue
 	var updatedKeys []string
+	var items []*indexhandler.Item
 	p := processor.New(
 		scanner.NewXRPCScanner(
 			xrpcClient,
@@ -141,6 +184,15 @@ func (h *Handler) Handle(ctx context.Context, req *Request) {
 					updatedKeys = append(updatedKeys, "/"+key)
 				},
 			),
+			consumer.SetDailyJSONRecordS3OnSuccessFunc(
+				func(post *bsky.FeedDefs_FeedViewPost, key string, position int) {
+					items = append(items, &indexhandler.Item{
+						Post:     post,
+						Key:      key,
+						Position: position,
+					})
+				},
+			),
 		),
 	)
 
@@ -153,6 +205,16 @@ func (h *Handler) Handle(ctx context.Context, req *Request) {
 
 	if err := p.Close(ctx); err != nil {
 		h.logger.Warn("Proc close",
+			"err", err,
+		)
+		// continue
+	}
+
+	if err := h.invokeIndexFunction(ctx, &indexhandler.Request{
+		DID:   session.Did,
+		Items: items,
+	}); err != nil {
+		h.logger.Error("invoke index function error",
 			"err", err,
 		)
 		// continue
@@ -174,7 +236,7 @@ func (h *Handler) Handle(ctx context.Context, req *Request) {
 				"distributionId", h.distribution,
 				"paths", updatedKeys,
 			)
-			return
+			// continue
 		}
 	}
 
@@ -187,6 +249,6 @@ func (h *Handler) Handle(ctx context.Context, req *Request) {
 			"err", err,
 			"did", session.Did,
 		)
-		return
+		// continue
 	}
 }

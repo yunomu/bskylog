@@ -5,11 +5,12 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/aws/aws-lambda-go/lambda"
+	lambdahandler "github.com/aws/aws-lambda-go/lambda"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/cloudfront"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/lambda"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	"github.com/yunomu/bskylog/lib/crawlerdb"
@@ -40,6 +41,7 @@ func main() {
 	distribution := os.Getenv("DISTRIBUTION")
 	crawlerTable := os.Getenv("CRAWLER_TABLE")
 	bskyHost := os.Getenv("BSKY_HOST")
+	indexFunction := os.Getenv("INDEX_FUNCTION")
 
 	logger.Info("Init",
 		"region", region,
@@ -47,6 +49,7 @@ func main() {
 		"distribution", distribution,
 		"crawlerTable", crawlerTable,
 		"bskyHost", bskyHost,
+		"indexFunction", indexFunction,
 	)
 
 	ctx := context.Background()
@@ -72,8 +75,10 @@ func main() {
 		bucket,
 		cloudfront.NewFromConfig(awsCfg),
 		distribution,
+		lambda.NewFromConfig(awsCfg),
+		indexFunction,
 		logger.With("module", "handler"),
 	)
 
-	lambda.Start(h.Handle)
+	lambdahandler.Start(h.Handle)
 }

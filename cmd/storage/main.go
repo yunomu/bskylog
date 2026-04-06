@@ -71,7 +71,7 @@ func (c *command) Execute(ctx context.Context, f *flag.FlagSet, args ...interfac
 	}
 
 	s3Client := s3.NewFromConfig(awsCfg)
-	
+
 	var scanner storage.Scanner
 	if *c.prefix != "" {
 		scanner = storage.NewS3(s3Client, bucket, storage.S3OptionPrefix(*c.prefix))

@@ -17,6 +17,8 @@ import (
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 
+	"sort"
+
 	"github.com/yunomu/bskylog/lib/index"
 )
 
@@ -45,6 +47,15 @@ type Item struct {
 	Key      string                      `json:"key"`
 	Position int                         `json:"pos"`
 	Post     *bsky.FeedDefs_FeedViewPost `json:"post"`
+}
+
+func SortItems(items []*Item) {
+	sort.Slice(items, func(i, j int) bool {
+		if items[i].Key != items[j].Key {
+			return items[i].Key > items[j].Key
+		}
+		return items[i].Position > items[j].Position
+	})
 }
 
 type Request struct {

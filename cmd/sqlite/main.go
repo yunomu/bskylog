@@ -50,7 +50,7 @@ func (c *command) Execute(ctx context.Context, f *flag.FlagSet, args ...interfac
 		return subcommands.ExitFailure
 	}
 
-	db, err := gorm.Open(sqlite.Open(dbpath + "?_pragma=foreign_keys(1)&_pragma=busy_timeout(10000)"), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(dbpath+"?_pragma=foreign_keys(1)&_pragma=busy_timeout(10000)"), &gorm.Config{})
 	if err != nil {
 		slog.Error("failed to connect database", "err", err)
 		return subcommands.ExitFailure

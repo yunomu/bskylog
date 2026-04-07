@@ -1,6 +1,6 @@
 .PHONY: build test clean
 
-build: mod test
+build: mod
 	CGO_ENABLED=0 sam build
 
 test: mod

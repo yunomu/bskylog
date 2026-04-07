@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/glebarez/sqlite"
@@ -210,16 +211,28 @@ func (h *Handler) getPostsFromSearchResults(ctx context.Context, searchResults [
 	return ret, nil
 }
 
-func (h *Handler) Handle(ctx context.Context, req *events.APIGatewayV2HTTPRequest) *events.APIGatewayV2HTTPResponse {
-	did, ok := req.PathParameters["did"]
-	if !ok {
+func (h *Handler) Handle(ctx context.Context, req *events.LambdaFunctionURLRequest) *events.LambdaFunctionURLResponse {
+	path := req.RawPath
+	const prefix = "/search/"
+	if !strings.HasPrefix(path, prefix) {
 		h.logger.Info("Response",
-			"status", http.StatusNotFound,
-			"reason", "Path parameter `did` is not found",
-			"pathParameters", req.PathParameters,
+			"status", http.StatusBadRequest,
+			"reason", "Path does not start with /search/",
+			"rawPath", req.RawPath,
 		)
-		return &events.APIGatewayV2HTTPResponse{
-			StatusCode: http.StatusNotFound,
+		return &events.LambdaFunctionURLResponse{
+			StatusCode: http.StatusBadRequest,
+		}
+	}
+	did := strings.TrimPrefix(path, prefix)
+	if did == "" {
+		h.logger.Info("Response",
+			"status", http.StatusBadRequest,
+			"reason", "DID is empty in path",
+			"rawPath", req.RawPath,
+		)
+		return &events.LambdaFunctionURLResponse{
+			StatusCode: http.StatusBadRequest,
 		}
 	}
 
@@ -228,9 +241,9 @@ func (h *Handler) Handle(ctx context.Context, req *events.APIGatewayV2HTTPReques
 		h.logger.Info("Response",
 			"status", http.StatusBadRequest,
 			"reason", "Query parameter `q` is not found",
-			"pathParameters", req.QueryStringParameters,
+			"queryStringParameters", req.QueryStringParameters,
 		)
-		return &events.APIGatewayV2HTTPResponse{
+		return &events.LambdaFunctionURLResponse{
 			StatusCode: http.StatusBadRequest,
 		}
 	}
@@ -239,13 +252,13 @@ func (h *Handler) Handle(ctx context.Context, req *events.APIGatewayV2HTTPReques
 	if err := h.retrieveIndexFile(ctx, did, filePath); err != nil {
 		if errors.Is(err, ErrIndexNotPrepared) {
 			h.logger.Info("Index not prepared for did", "did", did)
-			return &events.APIGatewayV2HTTPResponse{
+			return &events.LambdaFunctionURLResponse{
 				StatusCode: http.StatusInternalServerError,
 				Body:       ErrIndexNotPrepared.Error(),
 			}
 		}
 		h.logger.Error("Failed to retrieve index file", "err", err, "did", did)
-		return &events.APIGatewayV2HTTPResponse{
+		return &events.LambdaFunctionURLResponse{
 			StatusCode: http.StatusInternalServerError,
 		}
 	}
@@ -253,7 +266,7 @@ func (h *Handler) Handle(ctx context.Context, req *events.APIGatewayV2HTTPReques
 	db, err := gorm.Open(sqlite.Open(filePath), &gorm.Config{})
 	if err != nil {
 		h.logger.Error("Failed to open SQLite database", "err", err, "path", filePath)
-		return &events.APIGatewayV2HTTPResponse{
+		return &events.LambdaFunctionURLResponse{
 			StatusCode: http.StatusInternalServerError,
 		}
 	}
@@ -263,7 +276,7 @@ func (h *Handler) Handle(ctx context.Context, req *events.APIGatewayV2HTTPReques
 	searchResults, err := idx.Search(ctx, query)
 	if err != nil {
 		h.logger.Error("Failed to perform search", "err", err, "query", query)
-		return &events.APIGatewayV2HTTPResponse{
+		return &events.LambdaFunctionURLResponse{
 			StatusCode: http.StatusInternalServerError,
 		}
 	}
@@ -271,7 +284,7 @@ func (h *Handler) Handle(ctx context.Context, req *events.APIGatewayV2HTTPReques
 	posts, err := h.getPostsFromSearchResults(ctx, searchResults)
 	if err != nil {
 		h.logger.Error("Failed to get posts from search results", "err", err)
-		return &events.APIGatewayV2HTTPResponse{
+		return &events.LambdaFunctionURLResponse{
 			StatusCode: http.StatusInternalServerError,
 		}
 	}
@@ -279,12 +292,12 @@ func (h *Handler) Handle(ctx context.Context, req *events.APIGatewayV2HTTPReques
 	jsonBytes, err := json.Marshal(posts)
 	if err != nil {
 		h.logger.Error("Failed to marshal posts to JSON", "err", err)
-		return &events.APIGatewayV2HTTPResponse{
+		return &events.LambdaFunctionURLResponse{
 			StatusCode: http.StatusInternalServerError,
 		}
 	}
 
-	return &events.APIGatewayV2HTTPResponse{
+	return &events.LambdaFunctionURLResponse{
 		StatusCode: http.StatusOK,
 		Headers: map[string]string{
 			"Content-Type": "application/json",

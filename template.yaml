@@ -18,6 +18,9 @@ Parameters:
     Default: "https://bsky.social"
   Cron:
     Type: String
+  CloudFrontOriginRequestPolicy:
+    Type: String
+    Default: "216adef6-5c7f-47e4-b989-5492eafa07d3"
 
 Globals:
   Function:
@@ -86,21 +89,22 @@ Resources:
             DomainName: !GetAtt PublishBucket.RegionalDomainName
             OriginAccessControlId: !GetAtt CloudFrontOriginAccessControl.Id
             S3OriginConfig: {}
-          - Id: !Sub "SearchApi-${AWS::StackName}"
-            DomainName: !Select [ 1, !Split [ '://', !GetAtt SearchHttpApi.ApiEndpoint ] ]
+          - Id: SearchFunctionOrigin
+            DomainName: !Select [2, !Split ["/", !GetAtt SearchFunctionUrl.FunctionUrl]]
             CustomOriginConfig:
-              OriginProtocolPolicy: HttpsOnly
+              OriginProtocolPolicy: https-only
               OriginSSLProtocols:
                 - TLSv1.2
         CacheBehaviors:
           - PathPattern: /search/*
-            TargetOriginId: !Sub "SearchApi-${AWS::StackName}"
+            TargetOriginId: SearchFunctionOrigin
             ViewerProtocolPolicy: https-only
             AllowedMethods:
               - GET
               - HEAD
               - OPTIONS
             CachePolicyId: !Ref CloudFrontManagedCachePolicy
+            OriginRequestPolicyId: !Ref CloudFrontOriginRequestPolicy
 
   SearchIndexBucket:
     Type: AWS::S3::Bucket
@@ -224,18 +228,6 @@ Resources:
       Roles:
         - !Ref CrawlerFunctionRole
 
-  SearchHttpApi:
-    Type: AWS::Serverless::HttpApi
-    Properties:
-      CorsConfiguration:
-        AllowOrigins:
-          - !Sub "https://${SiteDomainName}"
-        AllowMethods:
-          - GET
-        AllowHeaders:
-          - Content-Type
-        MaxAge: 300
-
   SearchFunction:
     Type: AWS::Serverless::Function
     Metadata:
@@ -249,13 +241,8 @@ Resources:
           SEARCH_INDEX_BUCKET: !Ref SearchIndexBucket
           PUBLISH_BUCKET: !Ref PublishBucket
           TMP_DIR: /tmp
-      Events:
-        SearchApi:
-          Type: HttpApi
-          Properties:
-            ApiId: !Ref SearchHttpApi
-            Path: /search/{did}
-            Method: GET
+      FunctionUrlConfig:
+        AuthType: NONE
 
   SearchFunctionPolicy:
     Type: AWS::IAM::Policy

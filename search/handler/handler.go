@@ -16,6 +16,7 @@ import (
 	"github.com/glebarez/sqlite"
 	"golang.org/x/sync/errgroup"
 	"gorm.io/gorm"
+	gormlogger "gorm.io/gorm/logger"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
@@ -263,7 +264,9 @@ func (h *Handler) Handle(ctx context.Context, req *events.LambdaFunctionURLReque
 		}, nil
 	}
 
-	db, err := gorm.Open(sqlite.Open(filePath), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(filePath), &gorm.Config{
+		Logger: gormlogger.Default.LogMode(gormlogger.Silent),
+	})
 	if err != nil {
 		h.logger.Error("Failed to open SQLite database", "err", err, "path", filePath)
 		return &events.LambdaFunctionURLResponse{

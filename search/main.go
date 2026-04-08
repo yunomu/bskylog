@@ -24,7 +24,7 @@ func main() {
 	}
 
 	searchIndexBucket := os.Getenv("SEARCH_INDEX_BUCKET")
-	publishBucket := os.Getenv("SEARCH_INDEX_BUCKET")
+	publishBucket := os.Getenv("PUBLISH_BUCKET")
 	tmpDir := os.Getenv("TMP_DIR")
 	logger.Info("Start",
 		"searchIndexBucket", searchIndexBucket,

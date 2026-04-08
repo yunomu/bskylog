@@ -211,7 +211,7 @@ func (h *Handler) getPostsFromSearchResults(ctx context.Context, searchResults [
 	return ret, nil
 }
 
-func (h *Handler) Handle(ctx context.Context, req *events.LambdaFunctionURLRequest) *events.LambdaFunctionURLResponse {
+func (h *Handler) Handle(ctx context.Context, req *events.LambdaFunctionURLRequest) (*events.LambdaFunctionURLResponse, error) {
 	path := req.RawPath
 	const prefix = "/search/"
 	if !strings.HasPrefix(path, prefix) {
@@ -222,7 +222,7 @@ func (h *Handler) Handle(ctx context.Context, req *events.LambdaFunctionURLReque
 		)
 		return &events.LambdaFunctionURLResponse{
 			StatusCode: http.StatusBadRequest,
-		}
+		}, nil
 	}
 	did := strings.TrimPrefix(path, prefix)
 	if did == "" {
@@ -233,7 +233,7 @@ func (h *Handler) Handle(ctx context.Context, req *events.LambdaFunctionURLReque
 		)
 		return &events.LambdaFunctionURLResponse{
 			StatusCode: http.StatusBadRequest,
-		}
+		}, nil
 	}
 
 	query, ok := req.QueryStringParameters["q"]
@@ -245,7 +245,7 @@ func (h *Handler) Handle(ctx context.Context, req *events.LambdaFunctionURLReque
 		)
 		return &events.LambdaFunctionURLResponse{
 			StatusCode: http.StatusBadRequest,
-		}
+		}, nil
 	}
 
 	filePath := filepath.Join(h.tmpDir, did)
@@ -255,12 +255,12 @@ func (h *Handler) Handle(ctx context.Context, req *events.LambdaFunctionURLReque
 			return &events.LambdaFunctionURLResponse{
 				StatusCode: http.StatusInternalServerError,
 				Body:       ErrIndexNotPrepared.Error(),
-			}
+			}, nil
 		}
 		h.logger.Error("Failed to retrieve index file", "err", err, "did", did)
 		return &events.LambdaFunctionURLResponse{
 			StatusCode: http.StatusInternalServerError,
-		}
+		}, nil
 	}
 
 	db, err := gorm.Open(sqlite.Open(filePath), &gorm.Config{})
@@ -268,7 +268,7 @@ func (h *Handler) Handle(ctx context.Context, req *events.LambdaFunctionURLReque
 		h.logger.Error("Failed to open SQLite database", "err", err, "path", filePath)
 		return &events.LambdaFunctionURLResponse{
 			StatusCode: http.StatusInternalServerError,
-		}
+		}, nil
 	}
 
 	idx := index.NewGorm(db, index.GormOptionLogger(h.logger))
@@ -278,7 +278,7 @@ func (h *Handler) Handle(ctx context.Context, req *events.LambdaFunctionURLReque
 		h.logger.Error("Failed to perform search", "err", err, "query", query)
 		return &events.LambdaFunctionURLResponse{
 			StatusCode: http.StatusInternalServerError,
-		}
+		}, nil
 	}
 
 	posts, err := h.getPostsFromSearchResults(ctx, searchResults)
@@ -286,7 +286,7 @@ func (h *Handler) Handle(ctx context.Context, req *events.LambdaFunctionURLReque
 		h.logger.Error("Failed to get posts from search results", "err", err)
 		return &events.LambdaFunctionURLResponse{
 			StatusCode: http.StatusInternalServerError,
-		}
+		}, nil
 	}
 
 	jsonBytes, err := json.Marshal(posts)
@@ -294,7 +294,7 @@ func (h *Handler) Handle(ctx context.Context, req *events.LambdaFunctionURLReque
 		h.logger.Error("Failed to marshal posts to JSON", "err", err)
 		return &events.LambdaFunctionURLResponse{
 			StatusCode: http.StatusInternalServerError,
-		}
+		}, nil
 	}
 
 	return &events.LambdaFunctionURLResponse{
@@ -303,5 +303,5 @@ func (h *Handler) Handle(ctx context.Context, req *events.LambdaFunctionURLReque
 			"Content-Type": "application/json",
 		},
 		Body: string(jsonBytes),
-	}
+	}, nil
 }

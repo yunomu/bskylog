@@ -36,8 +36,9 @@ func main() {
 		s3.NewFromConfig(cfg),
 		searchIndexBucket,
 		publishBucket,
-		tmpDir,
-		logger.With("module", "handler"),
+		handler.WithTmpDir(tmpDir),
+		handler.WithLogger(logger.With("module", "handler")),
+		handler.WithLimit(100),
 	)
 
 	lambda.StartWithContext(ctx, h.Handle)

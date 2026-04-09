@@ -39,24 +39,49 @@ type Handler struct {
 	publishBucket     string
 	tmpDir            string
 	logger            *slog.Logger
-	parallelism       int
+	limit             int
+}
+
+type HandlerOption func(*Handler)
+
+func WithLimit(p int) HandlerOption {
+	return func(h *Handler) {
+		h.limit = p
+	}
+}
+
+func WithLogger(l *slog.Logger) HandlerOption {
+	return func(h *Handler) {
+		h.logger = l
+	}
+}
+
+func WithTmpDir(t string) HandlerOption {
+	return func(h *Handler) {
+		h.tmpDir = t
+	}
 }
 
 func NewHandler(
 	s3Client S3Client,
 	searchIndexBucket string,
 	publishBucket string,
-	tmpDir string,
-	logger *slog.Logger,
+	opts ...HandlerOption,
 ) *Handler {
-	return &Handler{
+	h := &Handler{
 		s3Client:          s3Client,
 		searchIndexBucket: searchIndexBucket,
 		publishBucket:     publishBucket,
-		tmpDir:            tmpDir,
-		logger:            logger,
-		parallelism:       2,
+		tmpDir:            "/tmp",
+		logger:            slog.Default(),
+		limit:             100,
 	}
+
+	for _, opt := range opts {
+		opt(h)
+	}
+
+	return h
 }
 
 func (h *Handler) retrieveIndexFile(ctx context.Context, did string, filePath string) error {
@@ -112,76 +137,60 @@ func (h *Handler) getPostsFromSearchResults(ctx context.Context, searchResults [
 	keyMap := extractUniqueKeys(searchResults)
 
 	g, ctx := errgroup.WithContext(ctx)
-
-	keyCh := make(chan string, h.parallelism)
-	g.Go(func() error {
-		defer close(keyCh)
-
-		for key := range keyMap {
-			select {
-			case keyCh <- key:
-			case <-ctx.Done():
-				return ctx.Err()
-			}
-		}
-
-		return nil
-	})
+	g.SetLimit(h.limit)
 
 	itemCh := make(chan *indexhandler.Item, len(searchResults))
-	for i := 0; i < h.parallelism; i++ {
+	for key := range keyMap {
 		g.Go(func() error {
-			for key := range keyCh {
-				out, err := h.s3Client.GetObject(ctx, &s3.GetObjectInput{
-					Bucket: &h.publishBucket,
-					Key:    &key,
-				})
-				if err != nil {
-					h.logger.Error("GetObject",
-						"bucket", h.publishBucket,
-						"key", key,
-						"err", err,
-					)
-					return err
-				}
-				defer out.Body.Close()
+			out, err := h.s3Client.GetObject(ctx, &s3.GetObjectInput{
+				Bucket: &h.publishBucket,
+				Key:    &key,
+			})
+			if err != nil {
+				h.logger.Error("GetObject",
+					"bucket", h.publishBucket,
+					"key", key,
+					"err", err,
+				)
+				return err
+			}
+			defer out.Body.Close()
 
-				posMap := make(map[int]bool)
-				for _, p := range keyMap[key] {
-					posMap[p] = true
-				}
+			posMap := make(map[int]bool)
+			for _, p := range keyMap[key] {
+				posMap[p] = true
+			}
 
-				scanner := bufio.NewScanner(out.Body)
-				idx := 0
-				for scanner.Scan() {
-					if !posMap[idx] {
-						idx++
-						continue
-					}
-
-					var post bsky.FeedDefs_FeedViewPost
-					if err := json.Unmarshal(scanner.Bytes(), &post); err != nil {
-						h.logger.Error("Failed to unmarshal JSON record", "err", err, "key", key, "line", idx)
-						return err
-					}
-
-					select {
-					case itemCh <- &indexhandler.Item{
-						Post:     &post,
-						Key:      key,
-						Position: idx,
-					}:
-					case <-ctx.Done():
-						return ctx.Err()
-					}
-
+			scanner := bufio.NewScanner(out.Body)
+			idx := 0
+			for scanner.Scan() {
+				if !posMap[idx] {
 					idx++
+					continue
 				}
 
-				if err := scanner.Err(); err != nil {
-					h.logger.Error("Failed to scan S3 object body", "err", err, "key", key)
+				var post bsky.FeedDefs_FeedViewPost
+				if err := json.Unmarshal(scanner.Bytes(), &post); err != nil {
+					h.logger.Error("Failed to unmarshal JSON record", "err", err, "key", key, "line", idx)
 					return err
 				}
+
+				select {
+				case itemCh <- &indexhandler.Item{
+					Post:     &post,
+					Key:      key,
+					Position: idx,
+				}:
+				case <-ctx.Done():
+					return ctx.Err()
+				}
+
+				idx++
+			}
+
+			if err := scanner.Err(); err != nil {
+				h.logger.Error("Failed to scan S3 object body", "err", err, "key", key)
+				return err
 			}
 
 			return nil

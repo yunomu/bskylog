@@ -7,6 +7,7 @@ module View.Day exposing
     )
 
 import Element exposing (Attribute, Element, px)
+import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Lazy as Lazy
@@ -350,16 +351,15 @@ viewPost small post reply =
     Element.row
         [ Element.spacing 10
         ]
-        [ Element.link [ Element.alignTop ]
+        [ Element.link
+            [ Element.alignTop
+            , Element.width (px iconSize)
+            , Element.height (px iconSize)
+            , Background.image post.author.avatar
+            , Border.rounded (iconSize // 2)
+            ]
             { url = "https://bsky.app/profile/" ++ post.author.handle
-            , label =
-                Element.image
-                    [ Element.width (px iconSize)
-                    , Element.height (px iconSize)
-                    ]
-                    { src = post.author.avatar
-                    , description = ""
-                    }
+            , label = Element.none
             }
         , Element.column
             [ Element.width (px width)

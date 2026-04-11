@@ -216,7 +216,7 @@ update msg model =
                 |> Maybe.map
                     (\did ->
                         Http.get
-                            { url = UrlBuilder.absolute [ did, "search" ] [ UrlBuilder.string "q" query ]
+                            { url = UrlBuilder.absolute [ "search", did ] [ UrlBuilder.string "q" query ]
                             , expect = Http.expectJson SearchResult (JD.list Feed.decoder)
                             }
                     )

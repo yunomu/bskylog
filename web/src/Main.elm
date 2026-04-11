@@ -22,6 +22,7 @@ import View.Day
 import View.Index
 import View.Org.Header
 import View.Org.Month
+import View.Search
 
 
 type alias Flags =
@@ -41,6 +42,9 @@ type Msg
     | DayChanged String String String String
     | MonthMsg View.Org.Month.Msg
     | MonthChanged String String String
+    | SearchMsg View.Search.Msg
+    | SearchSubmit String
+    | SearchResult (Result Http.Error (List Feed))
 
 
 type alias Model =
@@ -50,6 +54,7 @@ type alias Model =
     , userAliases : Dict String String
     , dayModel : View.Day.Model Msg
     , monthModel : View.Org.Month.Model Msg
+    , searchModel : View.Search.Model Msg
     }
 
 
@@ -61,6 +66,7 @@ init flags url key =
       , userAliases = Dict.empty
       , dayModel = View.Day.init DayChanged
       , monthModel = View.Org.Month.init MonthChanged
+      , searchModel = View.Search.init SearchSubmit
       }
     , Cmd.batch
         [ HttpLib.get (InitFetchUserCsv (Nav.pushUrl key (Url.toString url))) "/users"
@@ -194,6 +200,43 @@ update msg model =
                 Err error ->
                     ( model, Cmd.none )
 
+        SearchMsg searchMsg ->
+            let
+                ( mModel, mCmd ) =
+                    View.Search.update searchMsg model.searchModel
+            in
+            ( { model | searchModel = mModel }
+            , mCmd
+            )
+
+        SearchSubmit query ->
+            ( model
+            , Route.user model.route
+                |> Maybe.andThen (\user -> Dict.get user model.userAliases)
+                |> Maybe.map
+                    (\did ->
+                        Http.get
+                            { url = UrlBuilder.absolute [ did, "search" ] [ UrlBuilder.string "q" query ]
+                            , expect = Http.expectJson SearchResult (JD.list Feed.decoder)
+                            }
+                    )
+                |> Maybe.withDefault Cmd.none
+            )
+
+        SearchResult res ->
+            case res of
+                Ok feeds ->
+                    let
+                        ( sModel, sCmd ) =
+                            View.Search.update (View.Search.UpdateFeeds feeds) model.searchModel
+                    in
+                    ( { model | searchModel = sModel }
+                    , sCmd
+                    )
+
+                Err err ->
+                    ( model, Cmd.none )
+
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
@@ -231,6 +274,9 @@ view model =
                         View.Day.view
                             (Lazy.lazy View.Org.Month.view model.monthModel)
                             model.dayModel
+
+                    Route.Search user query ->
+                        Lazy.lazy2 View.Search.view SearchMsg model.searchModel
 
                     _ ->
                         View.Index.view

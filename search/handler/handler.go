@@ -257,6 +257,15 @@ func (h *Handler) Handle(ctx context.Context, req *events.LambdaFunctionURLReque
 			StatusCode: http.StatusBadRequest,
 		}, nil
 	}
+	if query == "" {
+		return &events.LambdaFunctionURLResponse{
+			StatusCode: http.StatusOK,
+			Headers: map[string]string{
+				"Content-Type": "application/json",
+			},
+			Body: "[]",
+		}, nil
+	}
 
 	filePath := filepath.Join(h.tmpDir, did)
 	if err := h.retrieveIndexFile(ctx, did, filePath); err != nil {
@@ -285,7 +294,9 @@ func (h *Handler) Handle(ctx context.Context, req *events.LambdaFunctionURLReque
 
 	idx := index.NewGorm(db, index.GormOptionLogger(h.logger))
 
-	searchResults, err := idx.Search(ctx, query)
+	searchResults, err := idx.Search(ctx, &index.Query{
+		Text: strings.Fields(query),
+	})
 	if err != nil {
 		h.logger.Error("Failed to perform search", "err", err, "query", query)
 		return &events.LambdaFunctionURLResponse{

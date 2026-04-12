@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 
 	"github.com/google/subcommands"
 	"gorm.io/gorm"
@@ -51,7 +52,9 @@ func (c *command) Execute(ctx context.Context, f *flag.FlagSet, args ...interfac
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, nil))
 	gormIndex := index.NewGorm(db, index.GormOptionLogger(logger))
 
-	results, err := gormIndex.Search(ctx, *c.query)
+	results, err := gormIndex.Search(ctx, &index.Query{
+		Text: strings.Fields(*c.query),
+	})
 	if err != nil {
 		slog.Error("failed to execute search", "query", *c.query, "err", err)
 		return subcommands.ExitFailure

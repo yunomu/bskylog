@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"strings"
 
 	"gorm.io/gorm"
 
@@ -65,11 +66,29 @@ type SearchResult struct {
 	Position int
 }
 
-func (s *Gorm) Search(ctx context.Context, query string) ([]*SearchResult, error) {
+type Query struct {
+	Text []string
+}
+
+func (s *Gorm) Search(ctx context.Context, query *Query) ([]*SearchResult, error) {
+	db := s.db.WithContext(ctx)
+	dbOrig := db
+	var likes []string
+	var args []interface{}
+	for _, text := range query.Text {
+		likes = append(likes, "text LIKE ?")
+		args = append(args, "%"+text+"%")
+	}
+	db = db.Where(strings.Join(likes, " AND "), args...)
+
 	var records []Record
-	if err := s.db.WithContext(ctx).Where("text LIKE ?", "%"+query+"%").Find(&records).Error; err != nil {
+	if err := db.Find(&records).Error; err != nil {
 		s.logger.Error("failed to search records", "query", query, "err", err)
 		return nil, err
+	}
+
+	if db == dbOrig {
+		return nil, nil
 	}
 
 	results := make([]*SearchResult, len(records))
